@@ -1,0 +1,193 @@
+<template>
+  <div class="login-container">
+    <div class="login-card">
+      <h2>登录</h2>
+      <form @submit.prevent="handleLogin">
+        <div class="input-group">
+          <input
+            v-model="loginForm.username"
+            type="text"
+            placeholder="手机号/邮箱"
+            required
+          />
+        </div>
+        <div class="input-group">
+          <input
+            v-model="loginForm.password"
+            :type="showPassword ? 'text' : 'password'"
+            placeholder="密码"
+            required
+          />
+          <span class="toggle-password" @click="showPassword = !showPassword">
+      <svg
+        v-if="showPassword"
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        fill="currentColor"
+      >
+        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+      </svg>
+      <svg
+        v-else
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        fill="currentColor"
+      >
+        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
+      </svg>
+    </span>
+        </div>
+        <div class="remember-me">
+          <input type="checkbox" id="rememberMe" v-model="loginForm.rememberMe" />
+          <label for="rememberMe">记住我</label>
+        </div>
+        <button type="submit" class="login-button">登录</button>
+      </form>
+      <div class="links">
+        <router-link to="/forgot-password">忘记密码？</router-link>
+        <router-link to="/register">注册账号</router-link>
+      </div>
+      <div class="social-login">
+        <p>其他登录方式</p>
+        <button class="social-button wechat" @click="loginWithWechat">
+          微信登录
+        </button>
+        <button class="social-button apple" @click="loginWithApple">
+          Apple ID 登录
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+
+const router = useRouter();
+const loginForm = ref({
+  username: '',
+  password: '',
+  rememberMe: false,
+});
+const showPassword = ref(false);
+
+const handleLogin = () => {
+  // 模拟登录逻辑
+  if (loginForm.value.username && loginForm.value.password) {
+    alert('登录成功！');
+    router.push('/');
+  } else {
+    alert('请输入用户名和密码');
+  }
+};
+
+const loginWithWechat = () => {
+  alert('微信登录');
+};
+
+const loginWithApple = () => {
+  alert('Apple ID 登录');
+};
+</script>
+
+<style scoped>
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(0deg,#d3e2f7, #ffffff);
+}
+
+.login-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.input-group {
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #666;
+}
+
+.remember-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap; /* 防止文字换行 */
+  margin-bottom: 1rem;
+}
+
+
+.login-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2c2fff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  text-decoration: none;
+}
+
+.social-login {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.social-button {
+  width: 100%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.wechat {
+  background: #1aad19;
+  color: white;
+}
+
+.apple {
+  background: black;
+  color: white;
+}
+</style>
