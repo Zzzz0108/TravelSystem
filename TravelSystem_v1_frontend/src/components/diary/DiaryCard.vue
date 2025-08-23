@@ -1,0 +1,291 @@
+<template>
+  <div class="diary-card" @click="handleCardClick">
+    <div class="media-container">
+      <template v-if="diary.images && diary.images.length > 0">
+        <img 
+          v-for="(img, index) in diary.images" 
+          :key="index"
+          :src="img.imageUrl"
+          class="card-image"
+          loading="lazy"
+          @click="handlePreview(index)"
+          @error="handleImageError"
+        >
+      </template>
+      <img 
+        v-else
+        :src="defaultImage"
+        class="card-image"
+        loading="lazy"
+        @error="handleImageError"
+      >
+      <video 
+        v-if="diary.videoUrl"
+        :src="diary.videoUrl"
+        class="card-video"
+        controls
+      ></video>
+      <!-- 浏览量 -->
+      <div class="view-count">
+        <svg class="view-icon" viewBox="0 0 24 24">
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+        </svg>
+        <span>{{ diary.views }}</span>
+      </div>
+    </div>
+    
+    <div class="card-content">
+      <div class="diary-info">
+        <h3 class="title">{{ diary.title }}</h3>
+        <p class="content">{{ diary.content }}</p>
+        <div class="meta">
+          <span class="author">{{ diary.author?.username || '未知用户' }}</span>
+          <span class="date">{{ formatDate(diary.createdAt) }}</span>
+        </div>
+      </div>
+      <div class="action-bar">
+        <like-button :count="diary.likes" @click="handleLike"/>
+        <comment-button :count="diary.comments?.length || 0" @click="openComment"/>
+        <share-button @click="handleShare"/>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { format } from 'date-fns'
+import UserAvatar from '@/components/common/UserAvatar.vue'
+import { useDiaryStore } from '@/stores/diaryStore'
+import LikeButton from '@/components/common/LikeButton.vue'
+import CommentButton from '@/components/common/CommentButton.vue'
+import ShareButton from '@/components/common/ShareButton.vue'
+import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+
+const defaultImage = '/images/diaries/default.jpg'
+const router = useRouter()
+const diaryStore = useDiaryStore()
+
+const forbiddenSelectors = ['.action-bar', '.view-count', 'button', 'a','svg', 'path']
+// 添加卡片点击处理
+const handleCardClick = async (event) => {
+  console.log('尝试跳转到日记:', props.diary.id)
+  const forbiddenElements = ['.action-bar', '.view-count', 'button', 'a', 'svg', 'path']
+  const shouldPrevent = forbiddenElements.some(selector => 
+    event.target.closest(selector)
+  )
+
+  if (!shouldPrevent) {
+    try {
+      console.log('正在增加浏览量...')
+      await diaryStore.incrementViews(props.diary.id)
+      console.log('浏览量增加成功')
+      router.push(`/diary/${props.diary.id}`)
+    } catch (error) {
+      console.error('增加浏览量失败:', error)
+      ElMessage.error('增加浏览量失败，请稍后重试')
+      // 即使增加浏览量失败，也继续跳转到详情页
+      router.push(`/diary/${props.diary.id}`)
+    }
+  }
+}
+
+const props = defineProps({
+  diary: {
+    type: Object,
+    required: true,
+    validator(value) {
+      console.log('Diary data:', value)
+      console.log('Diary images:', value.images)
+      return !!value.id // 必须有id字段
+    }
+  }
+})
+
+const formatDate = (dateString) => {
+  return format(new Date(dateString), 'yyyy-MM-dd HH:mm')
+}
+
+const emit = defineEmits(['update:diary'])
+
+const handleLike = async () => {
+  try {
+    const updatedDiary = {
+      ...props.diary,
+      likes: props.diary.likes + (props.diary.isLiked ? -1 : 1),
+      isLiked: !props.diary.isLiked
+    }
+    emit('update:diary', updatedDiary)
+
+    // const response = await fetch(`/api/diaries/${props.diary.id}/like`, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Authorization': `Bearer ${localStorage.getItem('token')}`
+    //   }
+    // })
+    // if (!response.ok) throw new Error('点赞失败')
+  } catch (error) {
+    console.error('点赞失败:', error)
+  }
+}
+
+const handleShare = () => {
+  // 处理分享逻辑
+}
+
+const openComment = () => {
+  router.push({
+    path: `/diary/${props.diary.id}`,
+    hash: '#comments'
+  })
+}
+
+const handlePreview = (index) => {
+  // 处理图片预览逻辑
+}
+
+const handleImageError = (e) => {
+  e.target.src = defaultImage
+}
+
+onMounted(() => {
+  console.log('DiaryCard mounted')
+  console.log('Default image path:', defaultImage)
+})
+</script>
+
+<style lang="scss" scoped>
+.diary-card {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  width: 280px;
+  margin: 8px;
+  
+  &:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    border-color: rgba(0, 113, 227, 0.4);
+  }
+}
+
+.media-container {
+  position: relative;
+  padding-top: 56.25%;
+  overflow: hidden;
+  
+  .card-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+  }
+  
+  &:hover .card-image {
+    transform: scale(1.05);
+  }
+  
+  .card-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* 浏览量 */
+  .view-count {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    
+    .view-icon {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+  }
+}
+
+.card-content {
+  padding: 20px;
+  
+  .title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .content {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin-bottom: 20px;
+    text-overflow: ellipsis;
+    max-height: 3.2em;
+    word-break: break-all;
+    font-size: 14px;
+  }
+  
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    
+    .author {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .date {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+    }
+  }
+}
+
+.action-bar {
+  display: flex;
+  gap: 24px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 1;
+}
+</style>
