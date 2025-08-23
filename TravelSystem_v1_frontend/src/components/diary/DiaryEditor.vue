@@ -1,84 +1,174 @@
 <template>
   <div class="editor-container">
-    <el-card class="editor-card">
+    <div class="editor-card">
       <div class="editor-header">
-        <h2>撰写新游记</h2>
-        <el-button 
-          type="primary" 
-          size="large"
-          @click="handlePublish"
-          :loading="loading"
-          class="publish-btn"
-        >
-          发布
-        </el-button>
+        <div class="header-content">
+          <h2 class="editor-title">撰写新游记</h2>
+          <p class="editor-subtitle">分享你的精彩旅行故事</p>
+        </div>
+        <div class="header-actions">
+          <el-button 
+            size="large"
+            @click="handleCancel"
+            class="cancel-btn"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            取消
+          </el-button>
+          <el-button 
+            type="primary" 
+            size="large"
+            @click="handlePublish"
+            :loading="loading"
+            class="publish-btn"
+          >
+            <svg v-if="!loading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+              <path d="M2 2l7.586 7.586"/>
+              <circle cx="11" cy="11" r="2"/>
+            </svg>
+            <span>{{ loading ? '发布中...' : '发布游记' }}</span>
+          </el-button>
+        </div>
       </div>
       
       <div class="editor-main">
-        <el-input
-          v-model="form.title"
-          type="text"
-          placeholder="添加标题..."
-          class="title-input"
-          size="large"
-        />
+        <div class="input-section">
+          <div class="input-group">
+            <div class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </div>
+            <el-input
+              v-model="form.title"
+              type="text"
+              placeholder="给你的游记起个吸引人的标题..."
+              class="title-input"
+              size="large"
+            />
+          </div>
+        </div>
         
         <div class="content-editor">
+          <div class="editor-toolbar">
+            <div class="toolbar-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10,9 9,9 8,9"/>
+              </svg>
+              <span>内容编辑</span>
+            </div>
+          </div>
+          
           <el-input
             v-model="form.content"
             type="textarea"
-            :rows="8"
-            placeholder="分享你的旅行故事..."
+            :rows="12"
+            placeholder="分享你的旅行故事，描述你看到的风景、遇到的人和事，以及你的感受..."
             resize="none"
             class="content-input"
           />
           
           <!-- 多媒体上传区域 -->
           <div class="upload-section">
+            <div class="upload-header">
+              <h3 class="upload-title">添加照片和视频</h3>
+              <p class="upload-hint">让你的游记更加生动有趣</p>
+            </div>
+            
             <file-uploader @files-selected="handleFiles"/>
             
             <!-- 已上传内容预览 -->
-            <div class="media-preview">
-              <el-card 
-                v-for="(file, index) in form.media"
-                :key="index"
-                class="media-item"
-                shadow="hover"
-              >
-                <img 
-                  v-if="file.type.startsWith('image')"
-                  :src="file.url"
-                  class="preview-image"
+            <div class="media-preview" v-if="form.media.length > 0">
+              <div class="preview-header">
+                <span class="preview-count">{{ form.media.length }} 个文件</span>
+                <button class="clear-all-btn" @click="clearAllMedia">
+                  清空全部
+                </button>
+              </div>
+              
+              <div class="media-grid">
+                <div 
+                  v-for="(file, index) in form.media"
+                  :key="index"
+                  class="media-item"
                 >
-                <video 
-                  v-else
-                  :src="file.url"
-                  controls
-                  class="preview-video"
-                ></video>
-                <el-button
-                  class="delete-btn"
-                  type="danger"
-                  circle
-                  size="small"
-                  @click="removeMedia(index)"
-                >
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-card>
+                  <div class="media-content">
+                    <img 
+                      v-if="file.type.startsWith('image')"
+                      :src="file.url"
+                      class="preview-image"
+                    >
+                    <video 
+                      v-else
+                      :src="file.url"
+                      controls
+                      class="preview-video"
+                    ></video>
+                  </div>
+                  
+                  <div class="media-actions">
+                    <button class="action-btn move-btn" @click="moveMedia(index, -1)" :disabled="index === 0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15,18 9,12 15,6"/>
+                      </svg>
+                    </button>
+                    <button class="action-btn delete-btn" @click="removeMedia(index)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>
+                        <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                      </svg>
+                    </button>
+                    <button class="action-btn move-btn" @click="moveMedia(index, 1)" :disabled="index === form.media.length - 1">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9,18 15,12 9,6"/>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <div class="media-info">
+                    <span class="file-name">{{ file.file.name }}</span>
+                    <span class="file-size">{{ formatFileSize(file.file.size) }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         
         <div class="editor-footer">
           <div class="footer-section">
-            <h3>选择位置</h3>
+            <div class="section-header">
+              <div class="section-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+              </div>
+              <h3>选择位置</h3>
+            </div>
             <location-picker v-model="form.location"/>
           </div>
           
           <!-- 添加评分组件 -->
           <div class="footer-section" v-if="form.location && form.location.id">
-            <h3>景点评分</h3>
+            <div class="section-header">
+              <div class="section-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <h3>景点评分</h3>
+            </div>
             <star-rating
               v-model="form.rating"
               :rating-count="form.location.ratingCount || 0"
@@ -87,7 +177,7 @@
           </div>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -96,7 +186,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDiaryStore } from '@/stores/diaryStore'
 import { ElMessage } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import LocationPicker from '@/components/common/LocationPicker.vue'
 import StarRating from '@/components/common/StarRating.vue'
@@ -135,6 +224,27 @@ const handleFiles = (files) => {
 
 const removeMedia = (index) => {
   form.value.media.splice(index, 1)
+}
+
+const clearAllMedia = () => {
+  form.value.media = []
+}
+
+const moveMedia = (index, direction) => {
+  const newIndex = index + direction
+  if (newIndex >= 0 && newIndex < form.value.media.length) {
+    const temp = form.value.media[index]
+    form.value.media[index] = form.value.media[newIndex]
+    form.value.media[newIndex] = temp
+  }
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const handlePublish = async () => {
@@ -212,174 +322,470 @@ const handlePublish = async () => {
     loading.value = false
   }
 }
+
+const handleCancel = () => {
+  router.push('/diary')
+}
 </script>
 
 <style lang="scss" scoped>
 .editor-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 40px 20px;
+  min-height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .editor-card {
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(24, 91, 246, 0.1);
-  border: none;
+  max-width: 1000px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
-  :deep(.el-card__body) {
-    padding: 32px;
+  &:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
   }
 }
 
 .editor-header {
+  background: rgba(0, 122, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
   
-  h2 {
-    font-size: 28px;
-    margin: 0;
-    color: #333;
-    font-weight: 600;
+  .header-content {
+    .editor-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0 0 8px 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .editor-subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.7);
+      margin: 0;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 16px;
   }
 }
 
 .publish-btn {
-  background: #185bf6;
-  border: none;
-  padding: 12px 32px;
+  background: rgba(0, 122, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 16px 32px;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   
-  &:hover {
-    background: #0f4cd9;
+  &:hover:not(:disabled) {
+    background: rgba(0, 122, 255, 1);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(24, 91, 246, 0.2);
+    box-shadow: 0 8px 25px rgba(0, 122, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  
+  svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
-.title-input {
+.cancel-btn {
+  background: rgba(255, 68, 68, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 68, 68, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.editor-main {
+  padding: 32px;
+}
+
+.input-section {
   margin-bottom: 32px;
+}
+
+.input-group {
+  position: relative;
   
-  :deep(.el-input__wrapper) {
-    box-shadow: none;
-    border: 2px solid #eee;
-    border-radius: 12px;
-    padding: 16px 20px;
-    transition: all 0.3s ease;
+  .input-icon {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.7);
+    z-index: 2;
     
-    &:hover, &:focus {
-      box-shadow: none;
-      border-color: #185bf6;
+    svg {
+      width: 24px;
+      height: 24px;
     }
   }
   
-  :deep(.el-input__inner) {
-    font-size: 24px;
-    font-weight: 500;
+  .title-input {
+    :deep(.el-input__wrapper) {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 20px 20px 20px 60px;
+      box-shadow: none;
+      transition: all 0.3s ease;
+      
+      &:hover, &:focus {
+        border-color: rgba(0, 122, 255, 0.6);
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+      }
+    }
     
-    &::placeholder {
-      color: #999;
+    :deep(.el-input__inner) {
+      font-size: 24px;
+      font-weight: 600;
+      color: #ffffff;
+      
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
     }
   }
 }
 
 .content-editor {
   margin-bottom: 32px;
+}
+
+.editor-toolbar {
+  margin-bottom: 20px;
   
-  .content-input {
-    margin-bottom: 24px;
+  .toolbar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    font-weight: 500;
     
-    :deep(.el-textarea__inner) {
-      font-size: 16px;
-      line-height: 1.8;
-      padding: 20px;
-      border: 2px solid #eee;
-      border-radius: 12px;
-      transition: all 0.3s ease;
-      
-      &:hover, &:focus {
-        border-color: #185bf6;
-        box-shadow: 0 4px 12px rgba(24, 91, 246, 0.1);
-      }
-      
-      &::placeholder {
-        color: #999;
-      }
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+.content-input {
+  margin-bottom: 24px;
+  
+  :deep(.el-textarea__inner) {
+    font-size: 16px;
+    line-height: 1.8;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    color: #ffffff;
+    transition: all 0.3s ease;
+    
+    &:hover, &:focus {
+      border-color: rgba(0, 122, 255, 0.6);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+    }
+    
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.6);
     }
   }
 }
 
 .upload-section {
-  margin-top: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
   padding: 24px;
-  background: #f8f9ff;
-  border-radius: 12px;
+  
+  .upload-header {
+    margin-bottom: 20px;
+    
+    .upload-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0 0 8px 0;
+    }
+    
+    .upload-hint {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0;
+    }
+  }
 }
 
 .media-preview {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
   margin-top: 24px;
-}
-
-.media-item {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  border: none;
   
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(24, 91, 246, 0.15);
-  }
-  
-  .preview-image, .preview-video {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-  }
-  
-  .delete-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    opacity: 0;
-    transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.9);
-    border: none;
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
     
-    &:hover {
-      background: #fff;
-      transform: scale(1.1);
+    .preview-count {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 12px;
+    }
+    
+    .clear-all-btn {
+      background: none;
+      border: 1px solid rgba(255, 68, 68, 0.4);
+      color: rgba(255, 68, 68, 0.8);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background: rgba(255, 68, 68, 0.1);
+        border-color: rgba(255, 68, 68, 0.6);
+        color: rgba(255, 68, 68, 1);
+      }
     }
   }
   
-  &:hover .delete-btn {
-    opacity: 1;
+  .media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+  }
+}
+
+.media-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(0, 122, 255, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+  
+  .media-content {
+    position: relative;
+    
+    .preview-image, .preview-video {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+  }
+  
+  .media-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    
+    .action-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        transform: scale(1.1);
+      }
+      
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+      
+      &.delete-btn:hover {
+        background: rgba(255, 68, 68, 0.2);
+        border-color: rgba(255, 68, 68, 0.4);
+        color: rgba(255, 68, 68, 1);
+      }
+    }
+  }
+  
+  .media-info {
+    padding: 12px;
+    
+    .file-name {
+      display: block;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .file-size {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
   }
 }
 
 .editor-footer {
   margin-top: 40px;
   padding-top: 32px;
-  border-top: 2px solid #f0f2ff;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   
   .footer-section {
-    margin-bottom: 24px;
+    margin-bottom: 32px;
     
-    h3 {
-      font-size: 18px;
-      color: #333;
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       margin-bottom: 20px;
-      font-weight: 500;
+      
+      .section-icon {
+        color: rgba(0, 122, 255, 0.8);
+        
+        svg {
+          width: 24px;
+          height: 24px;
+        }
+      }
+      
+      h3 {
+        font-size: 18px;
+        color: #ffffff;
+        margin: 0;
+        font-weight: 600;
+      }
     }
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .editor-container {
+    padding: 16px;
+  }
+  
+  .editor-header {
+    padding: 24px;
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+    
+    .editor-title {
+      font-size: 24px;
+    }
+
+    .header-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+  
+  .editor-main {
+    padding: 24px;
+  }
+  
+  .media-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .publish-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

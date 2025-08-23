@@ -116,24 +116,35 @@ const handleSelect = (item) => {
     width: 100%;
     
     :deep(.el-input__wrapper) {
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       box-shadow: none;
-      border: 2px solid #eee;
+      border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 12px;
-      padding: 12px 16px;
+      padding: 16px 16px 16px 48px;
       transition: all 0.3s ease;
       
       &:hover, &:focus {
         box-shadow: none;
-        border-color: #185bf6;
+        border-color: rgba(0, 122, 255, 0.6);
+        background: rgba(66, 66, 66, 0.335);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
       }
     }
     
     :deep(.el-input__inner) {
       font-size: 16px;
+      color: #fffefe;
       
       &::placeholder {
-        color: #999;
+        color: rgba(255, 255, 255, 0.6);
       }
+    }
+    
+    :deep(.el-input__prefix) {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 18px;
     }
   }
 }
@@ -142,16 +153,44 @@ const handleSelect = (item) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 6px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  margin: 1px 0;
   
   .name {
     font-weight: 500;
-    color: #333;
+    color: #ffffff;
   }
   
   .city {
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
     font-size: 14px;
+  }
+}
+
+/* 下拉菜单样式 */
+:deep(.el-autocomplete-suggestion) {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  
+  .el-autocomplete-suggestion__list {
+    background: transparent;
+    
+    li {
+      background: transparent;
+      color: #ffffff;
+      
+      &:hover {
+        background: rgba(0, 122, 255, 0.2);
+      }
+      
+      &.highlighted {
+        background: rgba(0, 122, 255, 0.3);
+      }
+    }
   }
 }
 </style>

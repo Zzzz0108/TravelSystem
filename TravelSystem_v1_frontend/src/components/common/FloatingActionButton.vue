@@ -19,29 +19,43 @@
   position: fixed;
   bottom: 32px;
   right: 32px;
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: #0071e3;
+  background: rgba(0, 122, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: white;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 122, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
   
   &:hover {
-    background: #0051a3;
-    transform: scale(1.1);
+    background: rgba(0, 122, 255, 1);
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 12px 40px rgba(0, 122, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  &:active {
+    transform: translateY(-2px) scale(1.02);
   }
 }
 
 .fab-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   fill: currentColor;
+  transition: all 0.3s ease;
+}
+
+.fab-container:hover .fab-icon {
+  transform: rotate(90deg);
 }
 
 /* 在FloatingActionButton组件中添加样式 */
