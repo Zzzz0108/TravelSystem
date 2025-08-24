@@ -363,6 +363,21 @@ public class DiaryController {
         return ResponseEntity.ok(result);
     }
     
+    @GetMapping("/search/title")
+    public ResponseEntity<Page<Diary>> searchByTitle(
+            @RequestParam String title,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        System.out.println("=== 收到标题搜索请求 ===");
+        System.out.println("标题关键词: " + title);
+        System.out.println("分页信息: page=" + page + ", size=" + size);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Diary> result = diaryService.findByTitleContains(title, pageable);
+        System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
+        return ResponseEntity.ok(result);
+    }
+    
     @GetMapping("/search/prefix")
     public ResponseEntity<Page<Diary>> searchByTitlePrefix(
             @RequestParam String prefix,

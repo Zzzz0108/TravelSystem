@@ -105,16 +105,34 @@ export const deleteDiary = async (id) => {
 
 // 搜索日记
 export const searchDiaries = async (keyword, params) => {
-  const response = await api.get('/diaries/search', {
-    params: { keyword, ...params }
-  });
-  return response.data;
+  try {
+    console.log('正在调用通用搜索接口:', '/diaries/search', '关键词:', keyword, '参数:', params);
+    const response = await api.get('/diaries/search', {
+      params: { keyword, ...params }
+    });
+    console.log('通用搜索响应:', response);
+    return response.data;
+  } catch (error) {
+    console.error('通用搜索失败:', error);
+    console.error('错误状态码:', error.response?.status);
+    console.error('错误响应:', error.response?.data);
+    throw error;
+  }
 };
 
 // 按标签搜索日记
 export const getDiariesByTag = async (tag, params) => {
-  const response = await api.get(`/diaries/tag/${tag}`, { params });
-  return response.data;
+  try {
+    console.log('正在调用标签搜索接口:', `/diaries/tag/${tag}`, '参数:', params);
+    const response = await api.get(`/diaries/tag/${tag}`, { params });
+    console.log('标签搜索响应:', response);
+    return response.data;
+  } catch (error) {
+    console.error('标签搜索失败:', error);
+    console.error('错误状态码:', error.response?.status);
+    console.error('错误响应:', error.response?.data);
+    throw error;
+  }
 };
 
 // 点赞日记
@@ -277,16 +295,51 @@ export const deleteUserRating = async (id) => {
 
 // 根据目的地搜索日记
 export const searchByDestination = async (destination, params) => {
-  const response = await api.get('/diaries/search/destination', { 
-    params: { destination, ...params }
-  });
-  return response.data;
+  try {
+    console.log('正在调用目的地搜索接口:', '/diaries/search/destination', '目的地:', destination, '参数:', params);
+    const response = await api.get('/diaries/search/destination', { 
+      params: { destination, ...params }
+    });
+    console.log('目的地搜索响应:', response);
+    return response.data;
+  } catch (error) {
+    console.error('目的地搜索失败:', error);
+    console.error('错误状态码:', error.response?.status);
+    console.error('错误响应:', error.response?.data);
+    throw error;
+  }
+};
+
+// 按内容搜索日记
+export const searchByContent = async (content, params) => {
+  try {
+    console.log('正在调用内容搜索接口:', '/diaries/search/content', '内容:', content, '参数:', params);
+    const response = await api.get('/diaries/search/content', { 
+      params: { content, ...params }
+    });
+    console.log('内容搜索响应:', response);
+    return response.data;
+  } catch (error) {
+    console.error('内容搜索失败:', error);
+    console.error('错误状态码:', error.response?.status);
+    console.error('错误响应:', error.response?.data);
+    throw error;
+  }
 };
 
 // 精确查询日记标题
 export const searchByExactTitle = async (title) => {
-  const response = await api.get('/diaries/search/title', { params: { title } });
-  return response.data;
+  try {
+    console.log('正在调用精确标题搜索接口:', '/diaries/search/title', '标题:', title);
+    const response = await api.get('/diaries/search/title', { params: { title } });
+    console.log('精确标题搜索响应:', response);
+    return response.data;
+  } catch (error) {
+    console.error('精确标题搜索失败:', error);
+    console.error('错误状态码:', error.response?.status);
+    console.error('错误响应:', error.response?.data);
+    throw error;
+  }
 };
 
 // 全文检索

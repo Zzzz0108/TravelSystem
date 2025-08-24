@@ -172,6 +172,28 @@
   <div v-else class="loading">
     <p>加载中...</p>
   </div>
+  <!-- 自定义确认对话框 -->
+  <div v-if="showDeleteConfirm" class="custom-confirm-dialog">
+    <div class="confirm-overlay" @click="cancelDelete"></div>
+    <div class="confirm-content">
+      <div class="confirm-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="warning-icon">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <h3>确认删除</h3>
+      </div>
+      <div class="confirm-body">
+        <p>确定要删除您的评分吗？</p>
+        <p class="confirm-note">删除后无法恢复</p>
+      </div>
+      <div class="confirm-actions">
+        <button class="btn-cancel" @click="cancelDelete">取消</button>
+        <button class="btn-confirm" @click="confirmDelete" :disabled="loading">确定删除</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -193,6 +215,7 @@ const userStore = useUserStore()
 const newComment = ref('')
 const loading = ref(false)
 const currentRating = ref(0)
+const showDeleteConfirm = ref(false)
 
 const formatDate = (dateString) => {
   try {
@@ -358,7 +381,12 @@ const submitComment = async () => {
 
   try {
     loading.value = true;
+    console.log('开始提交评论，日记ID:', diaryStore.currentDiary.id);
+    console.log('评论内容:', newComment.value.trim());
+    console.log('用户信息:', userStore.user);
+    
     const newCommentData = await diaryStore.createComment(diaryStore.currentDiary.id, newComment.value.trim());
+    console.log('评论创建成功，返回数据:', newCommentData);
     
     if (newCommentData) {
       // 清空输入框
@@ -380,12 +408,27 @@ const submitComment = async () => {
     }
   } catch (error) {
     console.error('发布评论失败:', error);
-    if (error.response?.status === 401) {
+    console.error('错误详情:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      stack: error.stack
+    });
+    
+    // 根据错误类型提供不同的用户反馈
+    if (error.message.includes('响应数据为空')) {
+      ElMessage.warning('评论可能已提交，请刷新页面查看');
+    } else if (error.message.includes('响应数据格式不完整')) {
+      ElMessage.warning('评论提交成功，但数据格式异常，请刷新页面查看');
+    } else if (error.response?.status === 401) {
       ElMessage.error('登录已过期，请重新登录');
     } else if (error.response?.status === 403) {
       ElMessage.error('没有权限发表评论，请检查登录状态');
+    } else if (error.message.includes('网络错误') || error.message.includes('请求失败')) {
+      ElMessage.error('网络连接失败，请检查网络后重试');
     } else {
-      ElMessage.error('评论发布失败，请稍后重试');
+      ElMessage.error(error.message || '评论发布失败，请稍后重试');
     }
   } finally {
     loading.value = false;
@@ -449,35 +492,8 @@ const handleDeleteRating = async () => {
     return
   }
   
-  try {
-    loading.value = true
-    
-    // 确认删除
-    const confirmed = await ElMessageBox.confirm(
-      '确定要删除您的评分吗？',
-      '确认删除',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    if (confirmed) {
-      await diaryStore.deleteUserRating(diaryStore.currentDiary.id)
-      currentRating.value = 0
-      ElMessage.success('评分已删除')
-    }
-  } catch (error) {
-    if (error === 'cancel') {
-      // 用户取消删除
-      return
-    }
-    console.error('删除评分失败:', error)
-    ElMessage.error('删除评分失败，请稍后重试')
-  } finally {
-    loading.value = false
-  }
+  // 显示自定义确认对话框
+  showDeleteConfirm.value = true
 }
 
 const getCommentCount = () => {
@@ -491,6 +507,25 @@ const getCommentCount = () => {
   // 返回实际获取的评论数量，这样最准确
   return actualCount;
 }
+
+const confirmDelete = async () => {
+  try {
+    loading.value = true;
+    await diaryStore.deleteUserRating(diaryStore.currentDiary.id);
+    currentRating.value = 0;
+    ElMessage.success('评分已删除');
+  } catch (error) {
+    console.error('删除评分失败:', error);
+    ElMessage.error('删除评分失败，请稍后重试');
+  } finally {
+    loading.value = false;
+    showDeleteConfirm.value = false;
+  }
+};
+
+const cancelDelete = () => {
+  showDeleteConfirm.value = false;
+};
 </script>
 
 <style lang="scss" scoped>
@@ -846,5 +881,174 @@ const getCommentCount = () => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* 自定义确认对话框样式 */
+.custom-confirm-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.confirm-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: -1;
+}
+
+.confirm-content {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  width: 90%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  color: #ffffff;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  animation: dialogSlideIn 0.3s ease-out;
+}
+
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 16px 16px 0 0;
+}
+
+.confirm-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ff9900;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.warning-icon {
+  color: #ff9900;
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.confirm-body {
+  padding: 24px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.confirm-body p {
+  margin: 0 0 8px 0;
+}
+
+.confirm-note {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 12px;
+  font-style: italic;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0 0 16px 16px;
+}
+
+.btn-cancel, .btn-confirm {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #ff4d4f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.9), rgba(0, 122, 255, 0.8));
+  color: #ffffff;
+  border: 1px solid rgba(0, 122, 255, 0.3);
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 1), rgba(0, 122, 255, 0.9));
+    border-color: rgba(0, 122, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 </style>

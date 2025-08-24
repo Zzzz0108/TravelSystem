@@ -216,33 +216,29 @@ export const useDiaryStore = defineStore('diary', () => {
       }
 
       const trimmedKeyword = keyword.trim();
-      let url = '/api/diaries/search';
-      let params = {};
-      
-      if (searchMode === 'destination') {
-        url = '/api/diaries/search/destination';
-        params = { destination: trimmedKeyword };
-      } else if (searchMode === 'title') {
-        url = '/api/diaries/search';
-        params = { title: trimmedKeyword };
-      } else if (searchMode === 'content') {
-        url = '/api/diaries/search/content';
-        params = { content: trimmedKeyword };
-      }
-      
-      console.log('Search URL:', url);
-      console.log('Search Params:', params);
       console.log('Search Keyword:', trimmedKeyword);
       console.log('Search Mode:', searchMode);
       
-      const response = await axios.get(url, { 
-        params,
-        baseURL: 'http://localhost:9090'
-      });
-      console.log('Search Response:', response.data);
+      let response;
       
-      if (response.data && response.data.content) {
-        diaries.value = response.data.content;
+      if (searchMode === 'destination') {
+        // 使用目的地搜索接口
+        response = await diaryApi.searchByDestination(trimmedKeyword);
+      } else if (searchMode === 'title') {
+        // 使用标题搜索接口
+        response = await diaryApi.searchByExactTitle(trimmedKeyword);
+      } else if (searchMode === 'content') {
+        // 使用内容搜索接口
+        response = await diaryApi.searchByContent(trimmedKeyword);
+      } else {
+        // 使用通用搜索接口
+        response = await diaryApi.searchDiaries(trimmedKeyword);
+      }
+      
+      console.log('Search Response:', response);
+      
+      if (response && response.content) {
+        diaries.value = response.content;
         console.log('Updated diaries:', diaries.value);
       } else {
         console.warn('No content in response');
@@ -415,35 +411,60 @@ export const useDiaryStore = defineStore('diary', () => {
         throw new Error('参数错误');
       }
 
+      console.log('Store: 开始创建评论，日记ID:', diaryId, '内容:', content);
       const response = await commentApi.createComment(diaryId, { content });
-      console.log('评论创建响应:', response);
+      console.log('Store: 评论创建响应:', response);
       
-      if (!response?.data) {
-        throw new Error('服务器响应数据格式错误');
+      // 检查响应数据 - 使用更宽松的验证
+      if (!response) {
+        throw new Error('评论创建失败，响应数据为空');
+      }
+      
+      // 如果响应没有ID字段，尝试从其他字段推断
+      if (!response.id) {
+        console.warn('响应数据缺少ID字段，尝试使用其他标识:', response);
+        
+        // 检查是否有其他唯一标识符
+        if (response.content && response.createdAt) {
+          console.log('使用内容和时间作为临时标识');
+          // 创建一个临时ID，避免报错
+          response.id = `temp_${Date.now()}`;
+        } else {
+          throw new Error('评论创建失败，响应数据格式不完整');
+        }
       }
 
+      console.log('Store: 评论数据验证通过，开始更新本地状态');
+      
       if (currentDiary.value?.id === diaryId) {
         if (!currentDiary.value.comments) {
           currentDiary.value.comments = [];
         }
         // 确保新评论数据格式正确
         const newComment = {
-          id: response.data.id,
-          content: response.data.content,
-          createdAt: response.data.createdAt,
+          id: response.id,
+          content: response.content,
+          createdAt: response.createdAt,
           author: {
-            id: response.data.author?.id,
-            username: response.data.author?.username,
-            avatar: response.data.author?.avatar
+            id: response.author?.id,
+            username: response.author?.username,
+            avatar: response.author?.avatar
           }
         };
         currentDiary.value.comments = [newComment, ...currentDiary.value.comments];
         currentDiary.value.commentsCount = (currentDiary.value.commentsCount || 0) + 1;
+        console.log('Store: 本地状态更新完成，新评论:', newComment);
       }
       
-      return response.data;
+      console.log('Store: 评论创建成功，返回数据:', response);
+      return response;
     } catch (err) {
-      console.error('创建评论失败:', err);
+      console.error('Store: 创建评论失败:', err);
+      console.error('Store: 错误详情:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
       error.value = err.message;
       ElMessage.error(err.message || '评论发布失败');
       throw err;
