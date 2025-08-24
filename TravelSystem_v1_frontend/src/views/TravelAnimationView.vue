@@ -78,11 +78,11 @@
                 </svg>
               </div>
               <select v-model="animationStyle" class="option-select">
-                <option value="realistic">写实风格</option>
-                <option value="cartoon">卡通风格</option>
-                <option value="watercolor">水彩风格</option>
-              </select>
-            </div>
+              <option value="realistic">写实风格</option>
+              <option value="cartoon">卡通风格</option>
+              <option value="watercolor">水彩风格</option>
+            </select>
+          </div>
           </div>
           
           <div class="option-group">
@@ -95,11 +95,11 @@
                 </svg>
               </div>
               <select v-model="animationDuration" class="option-select">
-                <option value="30">30秒</option>
-                <option value="60">1分钟</option>
-                <option value="120">2分钟</option>
-              </select>
-            </div>
+              <option value="30">30秒</option>
+              <option value="60">1分钟</option>
+              <option value="120">2分钟</option>
+            </select>
+          </div>
           </div>
           
           <div class="option-group">
@@ -113,10 +113,10 @@
                 </svg>
               </div>
               <select v-model="backgroundMusic" class="option-select">
-                <option value="none">无音乐</option>
-                <option value="peaceful">舒缓音乐</option>
-                <option value="energetic">活力音乐</option>
-              </select>
+              <option value="none">无音乐</option>
+              <option value="peaceful">舒缓音乐</option>
+              <option value="energetic">活力音乐</option>
+            </select>
             </div>
           </div>
         </div>
@@ -410,7 +410,7 @@ const isLoggedIn = computed(() => {
     color: #ffffff;
     margin-bottom: 8px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
+}
 
   .section-subtitle {
     font-size: 14px;
@@ -418,23 +418,23 @@ const isLoggedIn = computed(() => {
   }
 }
 
-.upload-area {
+  .upload-area {
   border: 2px dashed rgba(255, 255, 255, 0.3);
   border-radius: 16px;
   padding: 48px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
   background: rgba(255, 255, 255, 0.02);
 
-  &:hover {
+    &:hover {
     border-color: rgba(0, 122, 255, 0.6);
     background: rgba(0, 122, 255, 0.05);
     transform: translateY(-2px);
-  }
+    }
 
-  .upload-content {
-    .upload-icon {
+    .upload-content {
+      .upload-icon {
       margin-bottom: 20px;
       
       svg {
@@ -449,7 +449,7 @@ const isLoggedIn = computed(() => {
       font-weight: 600;
       color: #ffffff;
       margin-bottom: 12px;
-    }
+      }
 
     .upload-hint {
       font-size: 14px;
@@ -523,7 +523,7 @@ const isLoggedIn = computed(() => {
         justify-content: center;
         padding: 0;
         transition: all 0.3s ease;
-        
+
         svg {
           width: 16px;
           height: 16px;
@@ -543,11 +543,11 @@ const isLoggedIn = computed(() => {
   margin-bottom: 24px;
 }
 
-.option-group {
+  .option-group {
   margin-bottom: 20px;
-
+    
   .option-label {
-    display: block;
+      display: block;
     margin-bottom: 8px;
     color: rgba(255, 255, 255, 0.9);
     font-weight: 500;
@@ -754,7 +754,7 @@ const isLoggedIn = computed(() => {
     svg {
       width: 24px;
       height: 24px;
-    }
+  }
     
     .loading-spinner {
       width: 24px;

@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   count: {
@@ -26,70 +26,97 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:isLiked', 'update:count'])
+const emit = defineEmits(['update:isLiked', 'update:count', 'click'])
+
+// 本地状态管理
+const localIsLiked = ref(props.isLiked)
+const localCount = ref(props.count)
 
 const likeIconPath = computed(() => 
-  props.isLiked 
+  localIsLiked.value 
     ? 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'
     : 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z'
 )
 
 const handleLike = () => {
-  const newCount = props.isLiked ? props.count - 1 : props.count + 1
-  emit('update:isLiked', !props.isLiked)
-  emit('update:count', newCount)
+  // 切换点赞状态
+  localIsLiked.value = !localIsLiked.value
+  
+  // 更新计数
+  if (localIsLiked.value) {
+    localCount.value = props.count + 1
+  } else {
+    localCount.value = props.count - 1
+  }
+  
+  // 触发事件
+  emit('update:isLiked', localIsLiked.value)
+  emit('update:count', localCount.value)
+  emit('click', localIsLiked.value)
 }
+
+// 监听外部props变化
+import { watch } from 'vue'
+watch(() => props.isLiked, (newValue) => {
+  localIsLiked.value = newValue
+})
+watch(() => props.count, (newValue) => {
+  localCount.value = newValue
+})
 </script>
 
 <style scoped>
 .like-button {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: none;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 16px;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 16px;
+  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.8);
   
   &:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   }
 
   &.liked {
     color: #ff2d55;
+    background: rgba(255, 45, 85, 0.2);
+    border-color: rgba(255, 45, 85, 0.4);
 
     .icon {
       fill: #ff2d55;
-      filter: drop-shadow(0 0 6px rgba(255,45,85,0.5)); /* 霓虹效果 */
+      filter: drop-shadow(0 0 8px rgba(255, 45, 85, 0.6));
+      animation: heartbeat 0.6s ease;
+    }
+    
+    .count {
+      color: #ff2d55;
+      font-weight: 600;
     }
   }
 }
 
 .icon {
-  width: 18px;
-  height: 18px;
-  fill: #666;
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  transition: all 0.3s ease;
 }
 
 .count {
   font-size: 14px;
   font-weight: 500;
-}
-
-.heart-icon {
-  path {
-    transition: fill 0.3s ease, filter 0.3s ease;
-  }
-  
-  &.active {
-    path {
-      fill: #FF2D55;
-      filter: drop-shadow(0 0 8px rgba(255,45,85,0.5));
-    }
-    animation: heartbeat 0.6s ease;
-  }
+  color: currentColor;
+  transition: all 0.3s ease;
 }
 
 @keyframes heartbeat {
@@ -99,7 +126,4 @@ const handleLike = () => {
   70% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
-
-
-
 </style>

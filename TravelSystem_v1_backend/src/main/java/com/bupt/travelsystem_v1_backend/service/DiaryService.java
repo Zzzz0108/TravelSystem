@@ -43,6 +43,12 @@ public interface DiaryService {
     // 点赞日记
     void likeDiary(Long diaryId, Long userId);
     
+    // 取消点赞日记
+    void unlikeDiary(Long diaryId, Long userId);
+    
+    // 检查用户是否点赞过某日记
+    boolean isLikedByUser(Long diaryId, Long userId);
+    
     // 评分日记
     Diary rateDiary(Long diaryId, Long userId, Integer rating);
     
@@ -63,6 +69,12 @@ public interface DiaryService {
     
     // 获取用户对日记的评分
     Integer getUserRating(Long diaryId, Long userId);
+    
+    // 检查用户是否已经评分过某日记
+    boolean hasUserRated(Long diaryId, Long userId);
+    
+    // 删除用户对日记的评分
+    Diary removeUserRating(Long diaryId, Long userId);
     
     // 压缩日记内容
     String compressDiaryContent(String content) throws RuntimeException;

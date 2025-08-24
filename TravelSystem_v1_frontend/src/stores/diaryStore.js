@@ -72,33 +72,76 @@ export const useDiaryStore = defineStore('diary', () => {
   const fetchDiaryById = async (id) => {
     try {
       loading.value = true
+      console.log('开始获取日记详情，ID:', id)
+      
       const diary = await diaryApi.getDiaryById(id)
-      console.log('获取到的原始日记数据:', diary)
+      console.log('API返回的原始日记数据:', diary)
+      
+      if (!diary) {
+        console.error('API返回null或undefined')
+        ElMessage.error('日记不存在或已被删除')
+        return null
+      }
+      
+      // 创建日记对象的副本，避免修改原始数据
+      const processedDiary = { ...diary }
       
       // 处理视频URL
-      if (diary.videoUrl) {
-        console.log('找到视频URL:', diary.videoUrl)
-        diary.videoUrl = diary.videoUrl.startsWith('http') 
-          ? diary.videoUrl 
-          : `http://localhost:9090${diary.videoUrl}`
-        console.log('处理后的视频URL:', diary.videoUrl)
+      if (processedDiary.videoUrl) {
+        console.log('找到视频URL:', processedDiary.videoUrl)
+        processedDiary.videoUrl = processedDiary.videoUrl.startsWith('http') 
+          ? processedDiary.videoUrl 
+          : `http://localhost:9090${processedDiary.videoUrl}`
+        console.log('处理后的视频URL:', processedDiary.videoUrl)
       }
       
       // 处理图片URLs
-      if (diary.images && diary.images.length > 0) {
-        console.log('找到图片:', diary.images)
-        diary.images = diary.images.map(img => ({
-          ...img,
-          url: img.url.startsWith('http') ? img.url : `http://localhost:9090${img.url}`
-        }))
-        console.log('处理后的图片:', diary.images)
+      if (processedDiary.images && processedDiary.images.length > 0) {
+        console.log('找到图片:', processedDiary.images)
+        try {
+          processedDiary.images = processedDiary.images.map(img => {
+            const processedImg = { ...img }
+            if (img.imageUrl) {
+              processedImg.imageUrl = img.imageUrl.startsWith('http') 
+                ? img.imageUrl 
+                : `http://localhost:9090${img.imageUrl}`
+            }
+            if (img.url) {
+              processedImg.url = img.url.startsWith('http') 
+                ? img.url 
+                : `http://localhost:9090${img.url}`
+            }
+            return processedImg
+          })
+          console.log('处理后的图片:', processedDiary.images)
+        } catch (imgError) {
+          console.error('处理图片时出错:', imgError)
+          // 即使图片处理失败，也不影响日记数据的返回
+        }
       }
       
-      currentDiary.value = diary
-      return diary
+      console.log('处理完成的日记:', processedDiary)
+      currentDiary.value = processedDiary
+      console.log('设置到store的日记:', currentDiary.value)
+      return processedDiary
     } catch (err) {
+      console.error('获取日记详情失败:', err)
+      console.error('错误详情:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText
+      })
+      
+      if (err.response?.status === 404) {
+        ElMessage.error('日记不存在或已被删除')
+      } else if (err.response?.status === 500) {
+        ElMessage.error('服务器内部错误，请稍后重试')
+      } else {
+        ElMessage.error('获取日记详情失败')
+      }
+      
       error.value = err.message
-      ElMessage.error('获取日记详情失败')
       return null
     } finally {
       loading.value = false
@@ -166,30 +209,36 @@ export const useDiaryStore = defineStore('diary', () => {
   // 搜索日记
   const searchDiaries = async (keyword, searchMode = 'destination') => {
     try {
-      if (!keyword) {
+      if (!keyword || !keyword.trim()) {
         // 如果没有搜索内容，获取所有日记
         await fetchPopularDiaries();
         return;
       }
 
+      const trimmedKeyword = keyword.trim();
       let url = '/api/diaries/search';
       let params = {};
       
       if (searchMode === 'destination') {
         url = '/api/diaries/search/destination';
-        params = { destination: keyword };
+        params = { destination: trimmedKeyword };
       } else if (searchMode === 'title') {
         url = '/api/diaries/search';
-        params = { title: keyword };
+        params = { title: trimmedKeyword };
       } else if (searchMode === 'content') {
         url = '/api/diaries/search/content';
-        params = { content: keyword };
+        params = { content: trimmedKeyword };
       }
       
       console.log('Search URL:', url);
       console.log('Search Params:', params);
+      console.log('Search Keyword:', trimmedKeyword);
+      console.log('Search Mode:', searchMode);
       
-      const response = await axios.get(url, { params });
+      const response = await axios.get(url, { 
+        params,
+        baseURL: 'http://localhost:9090'
+      });
       console.log('Search Response:', response.data);
       
       if (response.data && response.data.content) {
@@ -219,18 +268,106 @@ export const useDiaryStore = defineStore('diary', () => {
     }
   }
 
-  // 点赞/取消点赞
-  const toggleLike = async (id) => {
+  // 点赞日记
+  const likeDiary = async (id) => {
     try {
-      const updatedDiary = await diaryApi.toggleLike(id)
+      loading.value = true
+      const response = await diaryApi.likeDiary(id)
+      console.log('点赞成功，响应:', response)
+      
+      // 更新日记的点赞数
+      if (currentDiary.value?.id === id) {
+        currentDiary.value.likes = (currentDiary.value.likes || 0) + 1
+        currentDiary.value.isLiked = true
+      }
+      
+      // 更新日记列表中的点赞数
       const index = diaries.value.findIndex(d => d.id === id)
       if (index !== -1) {
-        diaries.value[index] = updatedDiary
+        diaries.value[index].likes = (diaries.value[index].likes || 0) + 1
+        diaries.value[index].isLiked = true
       }
+      
+      return response
+    } catch (err) {
+      error.value = err.message
+      ElMessage.error('点赞失败')
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 取消点赞
+  const unlikeDiary = async (id) => {
+    try {
+      loading.value = true
+      const response = await diaryApi.unlikeDiary(id)
+      console.log('取消点赞成功，响应:', response)
+      
+      // 更新日记的点赞数
       if (currentDiary.value?.id === id) {
-        currentDiary.value = updatedDiary
+        currentDiary.value.likes = Math.max(0, (currentDiary.value.likes || 0) - 1)
+        currentDiary.value.isLiked = false
       }
-      return updatedDiary
+      
+      // 更新日记列表中的点赞数
+      const index = diaries.value.findIndex(d => d.id === id)
+      if (index !== -1) {
+        diaries.value[index].likes = Math.max(0, (diaries.value[index].likes || 0) - 1)
+        diaries.value[index].isLiked = false
+      }
+      
+      return response
+    } catch (err) {
+      error.value = err.message
+      ElMessage.error('取消点赞失败')
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 检查点赞状态
+  const checkLikeStatus = async (id) => {
+    try {
+      const response = await diaryApi.checkLikeStatus(id)
+      console.log('点赞状态检查结果:', response)
+      
+      // 更新日记的点赞状态
+      if (currentDiary.value?.id === id) {
+        currentDiary.value.isLiked = response
+      }
+      
+      // 更新日记列表中的点赞状态
+      const index = diaries.value.findIndex(d => d.id === id)
+      if (index !== -1) {
+        diaries.value[index].isLiked = response
+      }
+      
+      return response
+    } catch (err) {
+      console.error('检查点赞状态失败:', err)
+      return false
+    }
+  }
+
+  // 点赞/取消点赞（兼容原有方法）
+  const toggleLike = async (id) => {
+    try {
+      // 先检查当前点赞状态
+      const isLiked = await checkLikeStatus(id)
+      console.log('当前点赞状态:', isLiked)
+      
+      if (isLiked) {
+        // 如果已点赞，则取消点赞
+        console.log('用户已点赞，执行取消点赞')
+        return await unlikeDiary(id)
+      } else {
+        // 如果未点赞，则点赞
+        console.log('用户未点赞，执行点赞')
+        return await likeDiary(id)
+      }
     } catch (err) {
       error.value = err.message
       ElMessage.error('操作失败')
@@ -339,20 +476,30 @@ export const useDiaryStore = defineStore('diary', () => {
     try {
       loading.value = true
       const updatedDiary = await diaryApi.rateDiary(id, rating)
+      console.log('评分成功，更新后的日记:', updatedDiary)
+      
       if (!updatedDiary) {
         throw new Error('评分失败')
       }
       
+      // 更新日记列表中的评分信息
       const index = diaries.value.findIndex(d => d.id === id)
       if (index !== -1) {
-        diaries.value[index] = updatedDiary
+        diaries.value[index] = { ...diaries.value[index], ...updatedDiary }
       }
+      
+      // 更新当前日记的评分信息
       if (currentDiary.value?.id === id) {
-        currentDiary.value = updatedDiary
+        currentDiary.value = { ...currentDiary.value, ...updatedDiary }
+        // 更新用户评分状态
+        currentDiary.value.userRating = rating
+        currentDiary.value.hasRated = true
       }
+      
       return updatedDiary
     } catch (err) {
       error.value = err.message
+      ElMessage.error('评分失败，请稍后重试')
       throw err
     } finally {
       loading.value = false
@@ -362,12 +509,67 @@ export const useDiaryStore = defineStore('diary', () => {
   // 获取用户对日记的评分
   const getUserRating = async (id) => {
     try {
-      loading.value = true
       const rating = await diaryApi.getUserRating(id)
+      console.log('获取到用户评分:', rating)
+      
+      // 更新当前日记的用户评分状态
+      if (currentDiary.value?.id === id) {
+        currentDiary.value.userRating = rating
+        currentDiary.value.hasRated = rating > 0
+      }
+      
       return rating
     } catch (err) {
-      error.value = err.message
+      console.error('获取用户评分失败:', err)
       return 0
+    }
+  }
+
+  // 检查用户是否已评分
+  const checkUserRated = async (id) => {
+    try {
+      const hasRated = await diaryApi.checkUserRated(id)
+      console.log('用户评分状态检查结果:', hasRated)
+      
+      // 更新当前日记的评分状态
+      if (currentDiary.value?.id === id) {
+        currentDiary.value.hasRated = hasRated
+      }
+      
+      return hasRated
+    } catch (err) {
+      console.error('检查用户评分状态失败:', err)
+      return false
+    }
+  }
+
+  // 删除用户评分
+  const deleteUserRating = async (id) => {
+    try {
+      loading.value = true
+      const updatedDiary = await diaryApi.deleteUserRating(id)
+      console.log('删除评分成功，更新后的日记:', updatedDiary)
+      
+      // 更新日记列表中的评分信息
+      const index = diaries.value.findIndex(d => d.id === id)
+      if (index !== -1) {
+        diaries.value[index] = { ...diaries.value[index], ...updatedDiary }
+      }
+      
+      // 更新当前日记的评分信息
+      if (currentDiary.value?.id === id) {
+        currentDiary.value = { ...currentDiary.value, ...updatedDiary }
+        // 清除用户评分状态
+        currentDiary.value.userRating = 0
+        currentDiary.value.hasRated = false
+      }
+      
+      ElMessage.success('评分已删除')
+      return updatedDiary
+    } catch (err) {
+      error.value = err.message
+      ElMessage.error('删除评分失败，请稍后重试')
+      throw err
     } finally {
       loading.value = false
     }
@@ -482,11 +684,16 @@ export const useDiaryStore = defineStore('diary', () => {
     searchDiaries,
     getDiariesByTag,
     toggleLike,
+    likeDiary,
+    unlikeDiary,
+    checkLikeStatus,
     fetchComments,
     createComment,
     deleteComment,
     rateDiary,
     getUserRating,
+    checkUserRated,
+    deleteUserRating,
     searchByDestination,
     searchByExactTitle,
     fullTextSearch,

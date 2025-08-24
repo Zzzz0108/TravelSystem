@@ -7,8 +7,7 @@
           <p class="editor-subtitle">分享你的精彩旅行故事</p>
         </div>
         <div class="header-actions">
-          <el-button 
-            size="large"
+          <button 
             @click="handleCancel"
             class="cancel-btn"
           >
@@ -16,12 +15,10 @@
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
             取消
-          </el-button>
-          <el-button 
-            type="primary" 
-            size="large"
+          </button>
+          <button 
             @click="handlePublish"
-            :loading="loading"
+            :disabled="loading"
             class="publish-btn"
           >
             <svg v-if="!loading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -30,30 +27,31 @@
               <path d="M2 2l7.586 7.586"/>
               <circle cx="11" cy="11" r="2"/>
             </svg>
+            <span v-if="loading" class="loading-spinner"></span>
             <span>{{ loading ? '发布中...' : '发布游记' }}</span>
-          </el-button>
+          </button>
         </div>
       </div>
       
       <div class="editor-main">
+        <!-- 标题输入 -->
         <div class="input-section">
           <div class="input-group">
             <div class="input-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                <path d="M4 6h16M4 12h16M4 18h7"/>
               </svg>
             </div>
-            <el-input
+            <input
               v-model="form.title"
               type="text"
               placeholder="给你的游记起个吸引人的标题..."
               class="title-input"
-              size="large"
             />
           </div>
         </div>
         
+        <!-- 内容编辑 -->
         <div class="content-editor">
           <div class="editor-toolbar">
             <div class="toolbar-item">
@@ -68,14 +66,12 @@
             </div>
           </div>
           
-          <el-input
+          <textarea
             v-model="form.content"
-            type="textarea"
-            :rows="12"
             placeholder="分享你的旅行故事，描述你看到的风景、遇到的人和事，以及你的感受..."
-            resize="none"
             class="content-input"
-          />
+            rows="12"
+          ></textarea>
           
           <!-- 多媒体上传区域 -->
           <div class="upload-section">
@@ -489,31 +485,27 @@ const handleCancel = () => {
   }
   
   .title-input {
-    :deep(.el-input__wrapper) {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 16px;
-      padding: 20px 20px 20px 60px;
-      box-shadow: none;
-      transition: all 0.3s ease;
-      
-      &:hover, &:focus {
-        border-color: rgba(0, 122, 255, 0.6);
-        background: rgba(255, 255, 255, 0.15);
-        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-      }
+    width: 100%;
+    padding: 20px 20px 20px 60px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    font-size: 24px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    outline: none;
+
+    &:hover, &:focus {
+      border-color: rgba(0, 122, 255, 0.6);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
     }
-    
-    :deep(.el-input__inner) {
-      font-size: 24px;
-      font-weight: 600;
-      color: #ffffff;
-      
-      &::placeholder {
-        color: rgba(255, 255, 255, 0.6);
-      }
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.6);
     }
   }
 }
@@ -542,28 +534,28 @@ const handleCancel = () => {
 
 .content-input {
   margin-bottom: 24px;
-  
-  :deep(.el-textarea__inner) {
-    font-size: 16px;
-    line-height: 1.8;
-    padding: 24px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    color: #ffffff;
-    transition: all 0.3s ease;
-    
-    &:hover, &:focus {
-      border-color: rgba(0, 122, 255, 0.6);
-      background: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-    }
-    
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.6);
-    }
+  padding: 24px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  font-size: 16px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  outline: none;
+  resize: none;
+
+  &:hover, &:focus {
+    border-color: rgba(0, 122, 255, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.6);
   }
 }
 
@@ -750,6 +742,8 @@ const handleCancel = () => {
         font-weight: 600;
       }
     }
+    
+
   }
 }
 

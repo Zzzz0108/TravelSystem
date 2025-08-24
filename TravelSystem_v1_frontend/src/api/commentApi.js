@@ -1,9 +1,8 @@
 import axios from 'axios';
-import { useUserStore } from '@/stores/userStore';
 
 const api = axios.create({
-  baseURL: '/api',
-  withCredentials: true
+  baseURL: 'http://localhost:9090/api',
+  timeout: 10000
 });
 
 // 添加请求拦截器
@@ -42,18 +41,7 @@ export const createComment = async (diaryId, comment) => {
     if (!response.data) {
       throw new Error('服务器响应数据格式错误');
     }
-    return {
-      data: {
-        id: response.data.id,
-        content: response.data.content,
-        createdAt: response.data.createdAt,
-        author: {
-          id: response.data.author?.id,
-          username: response.data.author?.username,
-          avatar: response.data.author?.avatar
-        }
-      }
-    };
+    return response.data;
   } catch (error) {
     console.error('创建评论失败:', error);
     throw error;

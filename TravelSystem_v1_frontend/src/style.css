@@ -135,6 +135,6 @@ input:focus, textarea:focus, select:focus {
   margin: 0;
   padding: 0;
   background: transparent;
-}
+  }
 
 /* 移除媒体查询，因为我们使用固定的深色主题 */

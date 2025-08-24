@@ -48,8 +48,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import org.springframework.data.domain.PageImpl;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class DiaryServiceImpl implements DiaryService {
     
     @Autowired
@@ -373,76 +375,234 @@ public class DiaryServiceImpl implements DiaryService {
     @Override
     @Transactional
     public void likeDiary(Long diaryId, Long userId) {
-        Diary diary = diaryRepository.findById(diaryId)
-                .orElseThrow(() -> new EntityNotFoundException("Diary not found"));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        
-        // 检查是否已经点赞
-        if (diaryLikeRepository.existsByDiaryAndUser(diary, user)) {
-            throw new IllegalStateException("User has already liked this diary");
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                    .orElseThrow(() -> new EntityNotFoundException("Diary not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+            
+            // 检查是否已经点赞
+            if (diaryLikeRepository.existsByDiaryAndUser(diary, user)) {
+                throw new IllegalStateException("User has already liked this diary");
+            }
+            
+            // 创建新的点赞记录
+            DiaryLike diaryLike = new DiaryLike(diary, user);
+            diaryLikeRepository.save(diaryLike);
+            
+            // 更新日记的点赞数
+            diary.setLikes(diary.getLikes() + 1);
+            diaryRepository.save(diary);
+            
+            // 更新热度分数
+            updatePopularityScore(diaryId);
+            
+        } catch (Exception e) {
+            log.error("点赞日记失败: diaryId={}, userId={}, error={}", diaryId, userId, e.getMessage(), e);
+            throw e;
         }
-        
-        // 创建新的点赞记录
-        DiaryLike diaryLike = new DiaryLike(diary, user);
-        diaryLikeRepository.save(diaryLike);
-        
-        // 更新日记的点赞数
-        diary.setLikes(diary.getLikes() + 1);
-        diaryRepository.save(diary);
+    }
+
+    @Override
+    @Transactional
+    public void unlikeDiary(Long diaryId, Long userId) {
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                    .orElseThrow(() -> new EntityNotFoundException("Diary not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+            
+            // 查找点赞记录
+            DiaryLike diaryLike = diaryLikeRepository.findByDiaryIdAndUserId(diaryId, userId);
+            if (diaryLike == null) {
+                throw new IllegalStateException("User has not liked this diary");
+            }
+            
+            // 删除点赞记录
+            diaryLikeRepository.delete(diaryLike);
+            
+            // 更新日记的点赞数
+            diary.setLikes(Math.max(0, diary.getLikes() - 1));
+            diaryRepository.save(diary);
+            
+            // 更新热度分数
+            updatePopularityScore(diaryId);
+            
+        } catch (Exception e) {
+            log.error("取消点赞日记失败: diaryId={}, userId={}, error={}", diaryId, userId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean isLikedByUser(Long diaryId, Long userId) {
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                    .orElseThrow(() -> new EntityNotFoundException("Diary not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+            
+            return diaryLikeRepository.existsByDiaryAndUser(diary, user);
+        } catch (Exception e) {
+            log.error("检查用户点赞状态失败: diaryId={}, userId={}, error={}", diaryId, userId, e.getMessage(), e);
+            return false;
+        }
     }
 
     @Override
     @Transactional
     public Diary rateDiary(Long diaryId, Long userId, Integer rating) {
-        Diary diary = diaryRepository.findById(diaryId)
-            .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+                
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
             
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
+            // 检查是否已经评分过
+            DiaryRating existingRating = diaryRatingRepository.findByDiaryIdAndUserId(diaryId, userId);
             
-        DiaryRating diaryRating = new DiaryRating(diary, user, rating);
-        diaryRatingRepository.save(diaryRating);
-        
-        // 更新平均评分
-        Double averageRating = diaryRatingRepository.getAverageRatingByDiary(diary);
-        Long ratingCount = diaryRatingRepository.getRatingCountByDiary(diary);
-        
-        diary.setAverageRating(averageRating);
-        diary.setRatingCount(ratingCount.intValue());
-        
-        // 更新热度分数
-        updatePopularityScore(diaryId);
-        
-        return diaryRepository.save(diary);
+            if (existingRating != null) {
+                // 更新现有评分
+                log.info("用户 {} 更新日记 {} 的评分: {} -> {}", userId, diaryId, existingRating.getRating(), rating);
+                existingRating.setRating(rating);
+                existingRating.setCreatedAt(java.time.LocalDateTime.now());
+                diaryRatingRepository.save(existingRating);
+            } else {
+                // 创建新评分
+                log.info("用户 {} 为日记 {} 创建新评分: {}", userId, diaryId, rating);
+                DiaryRating diaryRating = new DiaryRating(diary, user, rating);
+                diaryRatingRepository.save(diaryRating);
+            }
+            
+            // 重新计算平均评分和评分数量
+            updateDiaryRatingStats(diaryId);
+            
+            // 更新热度分数
+            updatePopularityScore(diaryId);
+            
+            // 返回更新后的日记
+            return diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+                
+        } catch (Exception e) {
+            log.error("评分日记失败: diaryId={}, userId={}, rating={}, error={}", 
+                     diaryId, userId, rating, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * 更新日记的评分统计信息
+     */
+    private void updateDiaryRatingStats(Long diaryId) {
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+            
+            // 重新计算平均评分
+            Double averageRating = diaryRatingRepository.getAverageRatingByDiary(diary);
+            Long ratingCount = diaryRatingRepository.getRatingCountByDiary(diary);
+            
+            // 处理平均评分为null的情况
+            if (averageRating == null) {
+                averageRating = 0.0;
+            }
+            
+            diary.setAverageRating(averageRating);
+            diary.setRatingCount(ratingCount.intValue());
+            
+            diaryRepository.save(diary);
+            
+            log.info("日记 {} 评分统计更新: 平均分={}, 评分数量={}", diaryId, averageRating, ratingCount);
+            
+        } catch (Exception e) {
+            log.error("更新日记评分统计失败: diaryId={}, error={}", diaryId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
     @Transactional
     public void updatePopularityScore(Long diaryId) {
-        Diary diary = diaryRepository.findById(diaryId)
-            .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+                
+            // 计算热度分数：浏览量 * 0.4 + 平均评分 * 0.6
+            double popularityScore = diary.getViews() * 0.4 + diary.getAverageRating() * 0.6;
+            diary.setPopularityScore(popularityScore);
             
-        // 计算热度分数：浏览量 * 0.4 + 平均评分 * 0.6
-        double popularityScore = diary.getViews() * 0.4 + diary.getAverageRating() * 0.6;
-        diary.setPopularityScore(popularityScore);
-        
-        diaryRepository.save(diary);
+            diaryRepository.save(diary);
+            
+            log.info("日记 {} 热度分数更新: 浏览量={}, 平均评分={}, 热度分数={}", 
+                    diaryId, diary.getViews(), diary.getAverageRating(), popularityScore);
+                    
+        } catch (Exception e) {
+            log.error("更新日记热度分数失败: diaryId={}, error={}", diaryId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
     public Integer getUserRating(Long diaryId, Long userId) {
-        Diary diary = diaryRepository.findById(diaryId)
-            .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+                
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
+                
+            // 使用Repository方法直接查询，避免懒加载问题
+            DiaryRating rating = diaryRatingRepository.findByDiaryIdAndUserId(diaryId, userId);
+            return rating != null ? rating.getRating() : 0;
             
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
+        } catch (Exception e) {
+            log.error("获取用户评分失败: diaryId={}, userId={}, error={}", diaryId, userId, e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    @Override
+    public boolean hasUserRated(Long diaryId, Long userId) {
+        try {
+            return diaryRatingRepository.existsByDiaryIdAndUserId(diaryId, userId);
+        } catch (Exception e) {
+            log.error("检查用户评分状态失败: diaryId={}, userId={}, error={}", diaryId, userId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional
+    public Diary removeUserRating(Long diaryId, Long userId) {
+        try {
+            Diary diary = diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+                
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
             
-        return diary.getRatings().stream()
-            .filter(rating -> rating.getUser().getId().equals(userId))
-            .findFirst()
-            .map(DiaryRating::getRating)
-            .orElse(0);
+            // 查找并删除评分记录
+            DiaryRating rating = diaryRatingRepository.findByDiaryIdAndUserId(diaryId, userId);
+            if (rating != null) {
+                diaryRatingRepository.delete(rating);
+                log.info("用户 {} 删除日记 {} 的评分: {}", userId, diaryId, rating.getRating());
+                
+                // 重新计算评分统计
+                updateDiaryRatingStats(diaryId);
+                
+                // 更新热度分数
+                updatePopularityScore(diaryId);
+            }
+            
+            return diaryRepository.findById(diaryId)
+                .orElseThrow(() -> new EntityNotFoundException("日记不存在"));
+                
+        } catch (Exception e) {
+            log.error("删除用户评分失败: diaryId={}, userId={}, error={}", diaryId, userId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override

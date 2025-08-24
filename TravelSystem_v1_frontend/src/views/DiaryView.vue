@@ -20,7 +20,7 @@
               type="text"
               class="search-input"
               placeholder="搜索旅行日记..."
-              @keyup.enter="handleSearch"
+              @keyup.enter="() => handleSearch()"
             />
             <button 
               v-if="searchQuery" 
@@ -113,17 +113,18 @@ onMounted(() => {
   initData()
 })
 
-const handleSearch = (query) => {
-  if (query !== undefined) {
-    searchQuery.value = query;
-  }
-  if (!searchQuery.value) {
+const handleSearch = () => {
+  if (!searchQuery.value || !searchQuery.value.trim()) {
     // 如果没有搜索内容，重新获取所有日记
     initData();
-  } else {
-    // 有搜索内容时才进行搜索
-    diaryStore.searchDiaries(searchQuery.value, searchMode.value);
+    return;
   }
+  
+  // 有搜索内容时才进行搜索
+  const trimmedQuery = searchQuery.value.trim();
+  console.log('搜索关键词:', trimmedQuery);
+  console.log('搜索模式:', searchMode.value);
+  diaryStore.searchDiaries(trimmedQuery, searchMode.value);
 };
 
 const clearSearch = () => {

@@ -81,8 +81,8 @@ public class AuthServiceImpl implements AuthService, UserDetailsService {
             // 密码登录
             if (loginRequest.getPassword() == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                 log.error("密码错误: {}", loginRequest.getEmail());
-                throw new RuntimeException("密码错误");
-            }
+            throw new RuntimeException("密码错误");
+        }
         } else if ("code".equals(loginRequest.getLoginType())) {
             // 验证码登录
             if (loginRequest.getCode() == null) {

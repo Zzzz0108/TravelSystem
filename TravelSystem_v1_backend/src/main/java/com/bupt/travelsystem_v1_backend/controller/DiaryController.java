@@ -104,21 +104,41 @@ public class DiaryController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Diary> updateDiary(@PathVariable Long id, @RequestBody Diary diary, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
-        return ResponseEntity.ok(diaryService.updateDiary(id, diary, userId));
+        try {
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            return ResponseEntity.ok(diaryService.updateDiary(id, diary, userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDiary(@PathVariable Long id, Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
-        diaryService.deleteDiary(id, userId);
-        return ResponseEntity.ok().build();
+        try {
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            diaryService.deleteDiary(id, userId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PostMapping("/{id}/like")
     public ResponseEntity<?> likeDiary(@PathVariable Long id, Authentication authentication) {
         try {
-            Long userId = Long.parseLong(authentication.getName());
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
             diaryService.likeDiary(id, userId);
             return ResponseEntity.ok().build();
         } catch (EntityNotFoundException e) {
@@ -127,6 +147,40 @@ public class DiaryController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to like diary");
+        }
+    }
+
+    @PostMapping("/{id}/unlike")
+    public ResponseEntity<?> unlikeDiary(@PathVariable Long id, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            diaryService.unlikeDiary(id, userId);
+            return ResponseEntity.ok().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to unlike diary");
+        }
+    }
+
+    @GetMapping("/{id}/is-liked")
+    public ResponseEntity<Boolean> isLikedByUser(@PathVariable Long id, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            boolean isLiked = diaryService.isLikedByUser(id, userId);
+            return ResponseEntity.ok(isLiked);
+        } catch (Exception e) {
+            return ResponseEntity.ok(false);
         }
     }
 
@@ -196,6 +250,42 @@ public class DiaryController {
             Integer rating = diaryService.getUserRating(id, userId);
             return ResponseEntity.ok(rating);
         } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{id}/has-rated")
+    public ResponseEntity<Boolean> hasUserRated(
+            @PathVariable Long id,
+            Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            boolean hasRated = diaryService.hasUserRated(id, userId);
+            return ResponseEntity.ok(hasRated);
+        } catch (Exception e) {
+            return ResponseEntity.ok(false);
+        }
+    }
+
+    @DeleteMapping("/{id}/rating")
+    public ResponseEntity<Diary> removeUserRating(
+            @PathVariable Long id,
+            Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Long userId = userService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            Diary diary = diaryService.removeUserRating(id, userId);
+            return ResponseEntity.ok(diary);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
     }
