@@ -1,1051 +1,1304 @@
 <template>
-  <div class="navigation-container">
-    <!-- 主内容区 -->
-    <main class="main-content">
+  <div class="navigation-page">
+    <!-- 顶部搜索栏 -->
+    <div class="search-section">
+      <div class="search-container">
+        <div class="location-input">
+          <div class="input-group">
+            <div class="input-item">
+              <span class="label">📍 起点</span>
+              <input 
+                v-model="startLocation" 
+                placeholder="当前位置"
+                readonly
+                class="location-input-field"
+              />
+              <button class="locate-btn" @click="getCurrentLocation">
+                <svg class="locate-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                </svg>
+              </button>
+      </div>
 
-      <!-- 搜索与筛选 -->
-      <div class="search-section">
-        <div class="search-header">
-          <h2 class="search-title">路线规划</h2>
-          <p class="search-subtitle">输入目的地，智能规划最佳路线</p>
-        </div>
-        
-        <div class="search-bar">
-          <div class="search-input-group">
-            <div class="search-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-            </div>
+            <div class="input-item">
+              <span class="label">🎯 终点</span>
             <input 
-              v-model="searchQuery"
-              type="text" 
-              placeholder="输入目的地（如二校门、图书馆）"
-              class="search-input"
-              @keyup.enter="addDestination"
-            >
-            <button 
-              v-if="searchQuery" 
-              class="clear-btn"
-              @click="clearSearch"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 18L18 6M6 6l12 12"/>
-              </svg>
+                v-model="destination" 
+                placeholder="输入目的地"
+                class="location-input-field"
+                @input="handleDestinationInput"
+                @focus="showDestinationSuggestions = true"
+                @blur="hideDestinationSuggestions"
+              />
+              <button class="search-btn" @click="searchRoute" :disabled="isSearching">
+                <svg v-if="!isSearching" class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <span v-else class="loading-spinner">⏳</span>
+                {{ isSearching ? '搜索中...' : '' }}
             </button>
+            </div>
           </div>
           
-          <div class="filter-group">
-            <div class="filter-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"/>
-              </svg>
+          <!-- 搜索建议下拉框 -->
+          <div v-if="showDestinationSuggestions && destinationSuggestions.length > 0" class="suggestions-dropdown">
+            <div
+              v-for="suggestion in destinationSuggestions"
+              :key="suggestion.id"
+              class="suggestion-item"
+              @click="selectDestination(suggestion)"
+            >
+              <div class="suggestion-name">{{ suggestion.name }}</div>
+              <div class="suggestion-address">{{ suggestion.address }}</div>
             </div>
-            <div class="filter-select-wrapper">
-              <select v-model="transportMode" class="filter-select">
-                <option value="walking">步行</option>
-                <option value="bike">自行车</option>
-                <option value="scooter">电瓶车</option>
-              </select>
-            </div>
-            <button class="search-btn" @click="addDestination">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 4v16m8-8H4"/>
-              </svg>
-              添加
-            </button>
           </div>
         </div>
-        
-        <!-- 已选择的目的地列表 -->
-        <div class="selected-destinations" v-if="selectedDestinations.length > 0">
-          <div class="destinations-header">
-            <span class="destinations-label">已选择的目的地</span>
-            <button class="clear-all-btn" @click="clearAllDestinations">
-              清空全部
-            </button>
+            </div>
           </div>
-          <div class="destinations-tags">
+
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+      <!-- 地图区域 -->
+      <div class="map-container">
+        <div id="map" class="map"></div>
+        <div class="map-controls">
+          <button class="control-btn" @click="resetMap">
+            <svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M3 21v-5h5"/>
+            </svg>
+          </button>
+        </div>
+        </div>
+
+      <!-- 右侧信息面板 -->
+      <div class="info-panel">
+        <!-- 路线信息 -->
+        <div class="route-info" v-if="routeInfo">
+          <h3 class="panel-title">📍 路线信息</h3>
+          <div class="route-stats">
+            <div class="stat-item">
+              <span class="stat-label">总距离</span>
+              <span class="stat-value">{{ routeInfo.distance }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">预计时间</span>
+              <span class="stat-value">{{ routeInfo.duration }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">交通方式</span>
+              <span class="stat-value">{{ getTransportModeLabel(routeInfo.mode) }}</span>
+        </div>
+      </div>
+
+          <!-- 开始导航按钮 -->
+          <button class="start-navigation-btn" @click="startNavigation">
+            🚗 开始导航
+          </button>
+        </div>
+
+        <!-- 交通方式选择 -->
+        <div class="transport-modes">
+          <h3 class="panel-title">🚗 交通方式</h3>
+          <div class="mode-buttons">
+              <button 
+              v-for="mode in transportModes" 
+              :key="mode.value"
+              :class="['mode-btn', { active: selectedMode === mode.value }]"
+              @click="selectTransportMode(mode.value)"
+            >
+              {{ mode.icon }} {{ mode.label }}
+              </button>
+            </div>
+          </div>
+
+        <!-- 沿途设施 -->
+        <div class="facilities">
+          <h3 class="panel-title">🏪 沿途设施</h3>
+          <div class="facility-list">
+            <div class="facility-item">
+              <span class="facility-icon">⛽</span>
+              <span class="facility-name">加油站</span>
+                </div>
+            <div class="facility-item">
+              <span class="facility-icon">🅿️</span>
+              <span class="facility-name">停车场</span>
+              </div>
+            <div class="facility-item">
+              <span class="facility-icon">🍽️</span>
+              <span class="facility-name">餐厅</span>
+                </div>
+            <div class="facility-item">
+              <span class="facility-icon">🚻</span>
+              <span class="facility-name">卫生间</span>
+              </div>
+            </div>
+          </div>
+
+        <!-- 路线详情 -->
+        <div class="route-details" v-if="routeSteps.length > 0">
+          <h3 class="panel-title">📋 路线详情</h3>
+          <div class="steps-list">
             <div 
-              v-for="(dest, index) in selectedDestinations" 
+              v-for="(step, index) in routeSteps" 
               :key="index"
-              class="destination-tag"
+              class="step-item"
             >
-              <span class="tag-text">{{ dest }}</span>
-              <button class="remove-btn" @click="removeDestination(index)">×</button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 热门目的地 -->
-        <div class="hot-destinations">
-          <span class="hot-label">热门目的地</span>
-          <div class="hot-tags">
-            <span 
-              v-for="dest in hotDestinations" 
-              :key="dest"
-              class="hot-tag"
-              @click="addHotDestination(dest)"
-            >
-              {{ dest }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 功能按钮区 -->
-      <div class="action-section">
-        <button 
-          class="action-btn primary" 
-          @click="calculateRoute"
-          :disabled="selectedDestinations.length === 0"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7"/>
-          </svg>
-          开始导航
-        </button>
-        
-        <button 
-          class="action-btn secondary" 
-          @click="clearRoute"
-          :disabled="routes.length === 0"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-          </svg>
-          清空路线
-        </button>
-      </div>
-
-      <!-- 路线信息面板 -->
-      <div class="routes-section" v-if="routes.length > 0">
-        <div class="routes-header">
-          <h3 class="routes-title">推荐路线</h3>
-          <div class="transport-selector">
-            <button 
-              v-for="t in transports"
-              :key="t.value"
-              :class="{ active: selectedTransport === t.value }"
-              @click="selectedTransport = t.value"
-            >
-              <component :is="t.icon" />
-              {{ t.label }}
-            </button>
-          </div>
-        </div>
-
-        <div class="routes-grid">
-          <div 
-            v-for="(route, index) in filteredRoutes"
-            :key="index"
-            class="route-card"
-            @mouseenter="highlightRoute(route)"
-          >
-            <div class="route-header">
-              <div class="route-index">{{ String(index + 1).padStart(2, '0') }}</div>
-              <div class="route-info">
-                <h4 class="route-name">{{ route.name }}</h4>
-                <p class="route-description">{{ route.distance }}km · {{ route.duration }}分钟</p>
-              </div>
-            </div>
-            
-            <div class="route-stats">
-              <div class="stat-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                <span>步行{{ route.steps }}步</span>
-              </div>
-              <div class="stat-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                  <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-                <span>{{ route.poiCount }}个目的地</span>
+              <div class="step-number">{{ index + 1 }}</div>
+              <div class="step-content">
+                <div class="step-instruction">{{ step.instruction }}</div>
+                <div class="step-distance">{{ step.distance }}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- 设施选择面板 -->
-      <div class="facilities-section" v-if="filteredFacilities.length > 0">
-        <div class="facilities-header">
-          <h3 class="facilities-title">附近设施</h3>
-          <div class="facilities-filter">
-            <span 
-              v-for="tag in ['学习场所', '餐厅', '商店', '厕所', '咖啡馆', '运动场所', '医药', '银行', '快递站', '打印店']"
-              :key="tag"
-              :class="{ active: selectedTags.includes(tag) }"
-              @click="toggleTag(tag)"
-            >
-              {{ tag }}
-            </span>
-          </div>
-        </div>
-        
-        <div class="facilities-grid">
-          <div 
-            v-for="facility in filteredFacilities" 
-            :key="facility.id"
-            class="facility-card"
-            :class="{ 'selected': selectedFacility?.id === facility.id }"
-            @click="selectFacility(facility)"
-          >
-            <div class="facility-icon">{{ facility.icon || '📍' }}</div>
-            <div class="facility-info">
-              <h4 class="facility-name">{{ facility.name }}</h4>
-              <p class="facility-distance">{{ facility.distance }}米</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import WalkIcon from '@/assets/icon/Walk.vue'
-import BikeIcon from '@/assets/icon/Bike.vue'
-import ScooterIcon from '@/assets/icon/Scooter.vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 
-const searchQuery = ref('')
-const selectedDestinations = ref([])
-const selectedTags = ref([])
-const selectedTransport = ref('walking')
-const transportMode = ref('walking')
-const currentRoute = ref(null)
+const route = useRoute()
 
-// 添加新的响应式变量
-const filteredFacilities = ref([])
-const selectedFacility = ref(null)
+// 高德地图 Key 配置
+const AMAP_JS_KEY = '0d2dd776876f7864f7a92e79efd1a8b8'  // Web端 Key - 地图显示
+const AMAP_REST_KEY = 'af8c374c9ff24f82225595bf3fecd161'  // Web服务端 Key - 地理编码服务
+const AMAP_SECRET_KEY = '01ddbb74c50cc41ccef104b3b3520307'  // 安全密钥 - 签名验证
 
-// 添加设施类型映射
-const facilityTypeMap = {
-  '学习场所': 'LIBRARY',
-  '餐厅': 'CANTEEN',
-  '商店': 'STORE',
-  '厕所': 'TOILET',
-  '咖啡馆': 'CAFE',
-  '运动场所': 'STADIUM',
-  '医药': 'CLINIC',
-  '银行': 'BANK',
-  '快递站': 'EXPRESS',
-  '打印店': 'PRINT'
-}
+// 响应式数据
+const startLocation = ref('正在获取位置...')
+const destination = ref('')
+const destinationSuggestions = ref([])
+const showDestinationSuggestions = ref(false)
+const isSearching = ref(false)
+const routeInfo = ref(null)
+const routeSteps = ref([])
+const selectedMode = ref('driving')
+const startCoords = ref(null) // [lng, lat]
+const destinationCoords = ref(null) // [lng, lat]
 
-// 添加路线数据
-const routes = ref([])
 
-// 热门目的地
-const hotDestinations = [
-  '二校门', '图书馆', '清华学堂', '水木清华', '荷塘月色', 
-  '大礼堂', '清华园', '工字厅', '古月堂', '闻亭'
+// 地图实例
+let map = null
+let driving = null
+let walking = null
+let transit = null
+
+// 交通方式配置
+const transportModes = [
+  { value: 'driving', label: '驾车', icon: '🚗' },
+  { value: 'walking', label: '步行', icon: '🚶' },
+  { value: 'transit', label: '公交', icon: '🚌' },
+  { value: 'bicycling', label: '骑行', icon: '🚴' }
 ]
 
-// 计算过滤后的路线
-const filteredRoutes = computed(() => {
-  return routes.value
-})
-
-// 添加高亮路线方法
-const highlightRoute = (route) => {
-  console.log('高亮路线:', route);
-};
-
-// 更新路线信息
-const updateRouteInfo = (routeData) => {
-  if (!routeData) return
-  
-  // 计算步行步数（假设每步0.6米）
-  const steps = Math.round(routeData.distance / 0.6)
-  
-  routes.value = [{
-    name: '最短路线',
-    distance: (routeData.distance / 1000).toFixed(1), // 转换为千米
-    duration: Math.round(routeData.time / 60), // 使用后端返回的时间（秒转分钟）
-    steps: steps,
-    poiCount: routeData.poiCount || 0,
-    path: routeData.path
-  }]
+// 获取当前位置
+const getCurrentLocation = () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        startLocation.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+        startCoords.value = [Number(longitude.toFixed(6)), Number(latitude.toFixed(6))]
+        // 这里可以调用逆地理编码获取地址名称
+        reverseGeocode(latitude, longitude)
+      },
+      (error) => {
+        console.error('获取位置失败:', error)
+        startLocation.value = '定位失败'
+      }
+    )
+  } else {
+    startLocation.value = '浏览器不支持定位'
+  }
 }
 
-// 监听标签选择变化
-watch(selectedTags, async (newTags, oldTags) => {
-  if (newTags.length > 0) {
-    // 获取最后一个选中的标签对应的设施类型
-    const lastTag = newTags[newTags.length - 1]
-    const selectedType = facilityTypeMap[lastTag]
+// 逆地理编码 - 使用 Web服务端 Key 的 REST API
+const reverseGeocode = async (lat, lng) => {
+  try {
+    // 使用 Web服务端 Key 调用 REST API
+    const response = await fetch(
+      `https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_REST_KEY}&location=${lng},${lat}&extensions=base&output=json`
+    )
+    const data = await response.json()
     
-    if (selectedType) {
-      try {
-        // 模拟获取设施数据
-        filteredFacilities.value = [
-          { id: 1, name: '图书馆', distance: 200, icon: '📚' },
-          { id: 2, name: '餐厅', distance: 300, icon: '🍽️' },
-          { id: 3, name: '商店', distance: 150, icon: '🛒' }
-        ]
-      } catch (error) {
-        console.error('获取设施失败:', error)
+    if (data.status === '1' && data.regeocode) {
+      const address = data.regeocode.formatted_address
+      startLocation.value = address
+    } else {
+      startLocation.value = `坐标: ${lat.toFixed(4)}, ${lng.toFixed(4)} (逆地理编码失败: ${data.info})`
+    }
+  } catch (error) {
+    startLocation.value = `坐标: ${lat.toFixed(4)}, ${lng.toFixed(4)} (网络请求失败)`
+  }
+}
+
+// 获取模拟地址（基于坐标范围）
+const getMockAddress = (lat, lng) => {
+  // 根据坐标范围返回模拟地址
+  if (lat >= 31.0 && lat <= 32.0 && lng >= 104.0 && lng <= 105.0) {
+    return '四川省绵阳市涪城区'
+  } else if (lat >= 39.8 && lat <= 40.0 && lng >= 116.3 && lng <= 116.5) {
+    return '北京市东城区'
+  } else if (lat >= 39.9 && lat <= 40.0 && lng >= 116.3 && lng <= 116.4) {
+    return '北京市海淀区'
+  } else {
+    return `坐标: ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+  }
+}
+
+// 获取模拟坐标（为常见地点提供坐标）
+const getMockCoordinates = (address) => {
+  const mockPlaces = {
+    '北京邮电大学': [116.358381, 39.960444],
+    '北京邮电大学(海淀校区)': [116.358381, 39.960444],
+    '颐和园': [116.275544, 39.999001],
+    '故宫': [116.397428, 39.90923],
+    '故宫博物院': [116.397428, 39.90923],
+    '天安门': [116.397428, 39.90923],
+    '天安门广场': [116.397428, 39.90923],
+    '清华大学': [116.3264, 40.0004],
+    '北京大学': [116.3109, 39.9928],
+    '中关村': [116.3074, 39.9847],
+    '西单': [116.3740, 39.9134],
+    '王府井': [116.4180, 39.9150],
+    '三里屯': [116.4550, 39.9390],
+    '鸟巢': [116.3974, 39.9928],
+    '水立方': [116.3890, 39.9928],
+    '首都机场': [116.6010, 40.0799],
+    '北京南站': [116.3785, 39.8652],
+    '北京西站': [116.3219, 39.8944],
+    '北京站': [116.4270, 39.9025]
+  }
+  
+  // 模糊匹配
+  for (const [name, coords] of Object.entries(mockPlaces)) {
+    if (address.includes(name) || name.includes(address)) {
+      return coords
+    }
+  }
+  
+  return null
+}
+
+// 处理目的地输入 - 使用 Web服务端 Key 的 REST API
+const handleDestinationInput = async () => {
+  if (destination.value.length > 1) {
+    try {
+      // 显示搜索建议
+      showDestinationSuggestions.value = true
+      
+      // 使用 Web服务端 Key 调用 REST API
+      const response = await fetch(
+        `https://restapi.amap.com/v3/place/text?key=${AMAP_REST_KEY}&keywords=${encodeURIComponent(destination.value)}&city=北京&output=json&offset=10&page=1&extensions=base`
+      )
+      const data = await response.json()
+      
+      if (data.status === '1' && data.pois) {
+        destinationSuggestions.value = data.pois.map(poi => ({
+          id: poi.id || Math.random(),
+          name: poi.name,
+          address: poi.address || poi.pname + poi.cityname + poi.adname,
+          location: poi.location
+        }))
+      } else {
+        // 使用模拟数据作为备选
+        const mockSuggestions = getMockSuggestions(destination.value)
+        destinationSuggestions.value = mockSuggestions
       }
+    } catch (error) {
+      destinationSuggestions.value = []
     }
   } else {
-    filteredFacilities.value = []
-    selectedFacility.value = null
-  }
-}, { deep: true })
-
-const transports = [
-  { value: 'walking', label: '步行', icon: WalkIcon },
-  { value: 'bike', label: '自行车', icon: BikeIcon },
-  { value: 'scooter', label: '电瓶车', icon: ScooterIcon }
-]
-
-// 添加目的地
-const addDestination = () => {
-  if (searchQuery.value.trim()) {
-    selectedDestinations.value.push(searchQuery.value.trim())
-    searchQuery.value = ''
+    destinationSuggestions.value = []
+    showDestinationSuggestions.value = false
   }
 }
 
-// 添加热门目的地
-const addHotDestination = (dest) => {
-  if (!selectedDestinations.value.includes(dest)) {
-    selectedDestinations.value.push(dest)
+// 选择目的地，保存坐标
+const selectDestination = (suggestion) => {
+  destination.value = suggestion.name
+  if (suggestion.location) {
+    // poi.location: 'lng,lat'
+    const parts = String(suggestion.location).split(',')
+    if (parts.length === 2) {
+      destinationCoords.value = [Number(parts[0]), Number(parts[1])]
+    }
+  }
+  showDestinationSuggestions.value = false
+  destinationSuggestions.value = []
+}
+
+// 隐藏目的地搜索建议
+const hideDestinationSuggestions = () => {
+  // 延迟隐藏，让用户有时间点击建议项
+  setTimeout(() => {
+    showDestinationSuggestions.value = false
+  }, 200)
+}
+
+// 选择交通方式
+const selectTransportMode = (mode) => {
+  selectedMode.value = mode
+  if (startLocation.value && destination.value) {
+    searchRoute()
   }
 }
 
-// 移除目的地
-const removeDestination = (index) => {
-  selectedDestinations.value.splice(index, 1)
-}
+// 搜索路线
+const searchRoute = async () => {
+  if (!startLocation.value || !destination.value) {
+    alert('请先设置起点和终点')
+    return
+  }
 
-// 清空搜索
-const clearSearch = () => {
-  searchQuery.value = ''
-}
-
-// 清空所有目的地
-const clearAllDestinations = () => {
-  selectedDestinations.value = []
-}
-
-// 切换标签
-const toggleTag = (tag) => {
-  const index = selectedTags.value.indexOf(tag)
-  if (index > -1) {
-    selectedTags.value.splice(index, 1)
-  } else {
-    selectedTags.value.push(tag)
+  try {
+    isSearching.value = true
+    
+    // 直接调用地图路线规划，不使用模拟数据
+    await showRouteOnMap()
+  } catch (error) {
+    alert('路线规划失败，请稍后重试')
+  } finally {
+    isSearching.value = false
   }
 }
 
-// 路线规划方法
-const calculateRoute = async () => {
-  if (selectedDestinations.value.length === 0) return
+// 在地图上显示路线
+const showRouteOnMap = async () => {
+  if (!map || !startLocation.value || !destination.value) return
   
   try {
-    // 模拟路线数据
-    const routeData = {
-      distance: 1200, // 米
-      time: 900, // 秒
-      poiCount: selectedDestinations.value.length
+    // 清除之前的路线
+    map.clearMap()
+    
+    // 根据选择的交通方式显示路线
+    switch (selectedMode.value) {
+      case 'driving':
+        await showDrivingRoute()
+        break
+      case 'walking':
+        await showWalkingRoute()
+        break
+      case 'transit':
+        await showTransitRoute()
+        break
+      case 'bicycling':
+        await showBicyclingRoute()
+        break
+    }
+  } catch (error) {
+    console.error('显示路线失败:', error)
+  }
+}
+
+// 地理编码 - 使用 JS SDK 内置功能
+const geocode = async (addressOrCoords) => {
+  // 已是坐标数组
+  if (Array.isArray(addressOrCoords) && addressOrCoords.length === 2) {
+    return addressOrCoords
+  }
+  // 已是 'lng,lat' 字符串
+  if (typeof addressOrCoords === 'string' && /\s*\d+\.?\d*\s*,\s*\d+\.?\d*\s*/.test(addressOrCoords)) {
+    const [lng, lat] = addressOrCoords.split(',').map(s => Number(s.trim()))
+    return [lng, lat]
+  }
+  
+  // 使用 Web服务端 Key 调用 REST API
+  try {
+    const response = await fetch(
+      `https://restapi.amap.com/v3/geocode/geo?key=${AMAP_REST_KEY}&address=${encodeURIComponent(addressOrCoords)}&output=json`
+    )
+    const data = await response.json()
+    
+    if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
+      const location = data.geocodes[0].location
+      return location.split(',').map(Number)
+    } else {
+      // 尝试使用模拟坐标
+      const mockCoords = getMockCoordinates(addressOrCoords)
+      if (mockCoords) {
+        return mockCoords
+      }
+      return null
+    }
+  } catch (error) {
+    // 尝试使用模拟坐标
+    const mockCoords = getMockCoordinates(addressOrCoords)
+    if (mockCoords) {
+      return mockCoords
+    }
+    return null
+  }
+}
+
+// 在路线规划中优先使用缓存的坐标
+const showDrivingRoute = async () => {
+  if (!driving) return
+  try {
+    const start = startCoords.value || await geocode(startLocation.value)
+    const end = destinationCoords.value || await geocode(destination.value)
+    if (!start || !end) return alert('无法获取起终点坐标')
+    
+    // 使用 Web服务端 Key 的 REST API 进行路线规划
+    const response = await fetch(
+      `https://restapi.amap.com/v3/direction/driving?key=${AMAP_REST_KEY}&origin=${start[0]},${start[1]}&destination=${end[0]},${end[1]}&extensions=all&output=json`
+    )
+    const data = await response.json()
+    
+    if (data.status === '1' && data.route && data.route.paths && data.route.paths.length > 0) {
+      // 构造高德地图 JS SDK 期望的数据格式
+      const mockResult = {
+        routes: [{
+          distance: data.route.paths[0].distance,
+          time: data.route.paths[0].duration,
+          steps: data.route.paths[0].steps.map(step => ({
+            instruction: step.instruction,
+            distance: step.distance
+          }))
+        }]
+      }
+      
+      updateRouteInfo(mockResult, 'driving')
+    } else {
+      alert('路线规划失败: ' + (data.info || '未知错误'))
+    }
+  } catch (e) {
+    alert('路线规划出错: ' + e.message)
+  }
+}
+
+const showWalkingRoute = async () => {
+  if (!walking) return
+  try {
+    const start = startCoords.value || await geocode(startLocation.value)
+    const end = destinationCoords.value || await geocode(destination.value)
+    if (!start || !end) return alert('无法获取起终点坐标')
+    
+    // 使用 Web服务端 Key 的 REST API 进行路线规划
+    const response = await fetch(
+      `https://restapi.amap.com/v3/direction/walking?key=${AMAP_REST_KEY}&origin=${start[0]},${start[1]}&destination=${end[0]},${end[1]}&extensions=all&output=json`
+    )
+    const data = await response.json()
+    
+    if (data.status === '1' && data.route && data.route.paths && data.route.paths.length > 0) {
+      // 构造高德地图 JS SDK 期望的数据格式
+      const mockResult = {
+        routes: [{
+          distance: data.route.paths[0].distance,
+          time: data.route.paths[0].duration,
+          steps: data.route.paths[0].steps.map(step => ({
+            instruction: step.instruction,
+            distance: step.distance
+          }))
+        }]
+      }
+      
+      updateRouteInfo(mockResult, 'walking')
+    } else {
+      alert('路线规划失败: ' + (data.info || '未知错误'))
+    }
+  } catch (e) {
+    alert('路线规划出错: ' + e.message)
+  }
+}
+
+const showTransitRoute = async () => {
+  if (!transit) return
+  try {
+    const start = startCoords.value || await geocode(startLocation.value)
+    const end = destinationCoords.value || await geocode(destination.value)
+    if (!start || !end) return alert('无法获取起终点坐标')
+    
+    // 使用 Web服务端 Key 的 REST API 进行路线规划
+    const response = await fetch(
+      `https://restapi.amap.com/v3/direction/transit/integrated?key=${AMAP_REST_KEY}&origin=${start[0]},${start[1]}&destination=${end[0]},${end[1]}&city=北京&extensions=all&output=json`
+    )
+    const data = await response.json()
+    
+    if (data.status === '1' && data.route && data.route.transits && data.route.transits.length > 0) {
+      // 构造高德地图 JS SDK 期望的数据格式
+      const transit = data.route.transits[0]
+      const mockResult = {
+        routes: [{
+          distance: transit.distance,
+          time: transit.duration,
+          steps: transit.segments.map(segment => ({
+            instruction: segment.bus?.buslines?.[0]?.name || '步行',
+            distance: segment.walking?.distance || 0
+          }))
+        }]
+      }
+      
+      updateRouteInfo(mockResult, 'transit')
+    } else {
+      alert('路线规划失败: ' + (data.info || '未知错误'))
+    }
+  } catch (e) {
+    alert('路线规划出错: ' + e.message)
+  }
+}
+
+// 显示骑行路线（使用步行插件模拟）
+const showBicyclingRoute = async () => {
+  if (!walking) return
+  
+  try {
+    // 获取起点和终点的坐标
+    const startCoords = await geocode(startLocation.value)
+    const endCoords = await geocode(destination.value)
+    
+    if (!startCoords || !endCoords) {
+      alert('无法获取起点或终点的坐标，请检查地址输入')
+      return
     }
     
-    // 更新路线信息
-    updateRouteInfo(routeData)
+    // 使用坐标进行路线规划
+    walking.search(startCoords, endCoords, (status, result) => {
+      if (status === 'complete') {
+        console.log('骑行路线规划完成:', result)
+        updateRouteInfo(result, 'bicycling')
+      } else {
+        console.error('骑行路线规划失败:', result)
+        alert('路线规划失败，请稍后重试')
+      }
+    })
   } catch (error) {
-    console.error('路线规划失败:', error)
+    console.error('骑行路线规划出错:', error)
+    alert('路线规划出错，请稍后重试')
   }
 }
 
-// 清空路线方法
-const clearRoute = () => {
-  routes.value = []
-  selectedDestinations.value = []
+// 更新路线信息
+const updateRouteInfo = (result, mode) => {
+  if (!result || !result.routes || result.routes.length === 0) return
+  
+  const route = result.routes[0]
+  
+  // 更新路线信息
+  routeInfo.value = {
+    distance: formatDistance(route.distance),
+    duration: formatDuration(route.time),
+    mode: mode
+  }
+  
+  // 更新路线步骤
+  routeSteps.value = route.steps.map(step => ({
+    instruction: step.instruction,
+    distance: formatDistance(step.distance)
+  }))
+  
+  // 调整地图视野
+  if (map) {
+    map.setFitView()
+  }
 }
 
-// 选择设施的方法
-const selectFacility = async (facility) => {
-  selectedFacility.value = facility
-  // 将选中的设施添加到目的地列表
-  if (!selectedDestinations.value.includes(facility.name)) {
-    selectedDestinations.value.push(facility.name)
+// 格式化距离
+const formatDistance = (meters) => {
+  if (meters < 1000) {
+    return `${Math.round(meters)} 米`
+  } else {
+    return `${(meters / 1000).toFixed(1)} 公里`
   }
-  // 清空设施列表
-  filteredFacilities.value = []
-  selectedTags.value = []
 }
+
+// 格式化时间
+const formatDuration = (seconds) => {
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) {
+    return `${minutes} 分钟`
+  } else {
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    return `${hours} 小时 ${remainingMinutes} 分钟`
+  }
+}
+
+// 开始导航使用缓存的目的地坐标
+const startNavigation = async () => {
+  if (!routeInfo.value) return alert('请先规划路线')
+  try {
+    const end = destinationCoords.value || await geocode(destination.value)
+    if (!end) return alert('无法获取目的地坐标，导航失败')
+    const [lng, lat] = end
+    const navigationUrl = `amapuri://route/plan/?dlat=${lat}&dlng=${lng}&dname=${encodeURIComponent(destination.value)}&dev=0&t=0`
+    window.location.href = navigationUrl
+    setTimeout(() => {
+      if (!document.hidden) {
+        alert('请先安装高德地图 App')
+        window.open('https://mobile.amap.com/', '_blank')
+      }
+    }, 2000)
+  } catch (e) {
+    console.error('导航失败:', e)
+  }
+}
+
+// 重置地图
+const resetMap = () => {
+  if (map) {
+    map.setZoom(13)
+    map.setCenter([116.397428, 39.90923])
+  }
+}
+
+// 获取交通方式标签
+const getTransportModeLabel = (mode) => {
+  const found = transportModes.find(m => m.value === mode)
+  return found ? found.label : '未知'
+}
+
+// 获取模拟搜索建议
+const getMockSuggestions = (keyword) => {
+  const allPlaces = [
+    { name: '北京邮电大学(海淀校区)', address: '北京市海淀区西土城路10号', location: '116.358381,39.960444' },
+    { name: '颐和园', address: '北京市海淀区新建宫门路19号', location: '116.275544,39.999001' },
+    { name: '故宫博物院', address: '北京市东城区景山前街4号', location: '116.397428,39.90923' },
+    { name: '天安门广场', address: '北京市东城区天安门广场', location: '116.397428,39.90923' },
+    { name: '清华大学', address: '北京市海淀区清华园1号', location: '116.3264,40.0004' },
+    { name: '北京大学', address: '北京市海淀区颐和园路5号', location: '116.3109,39.9928' },
+    { name: '中关村', address: '北京市海淀区中关村大街', location: '116.3074,39.9847' },
+    { name: '西单', address: '北京市西城区西单北大街', location: '116.3740,39.9134' },
+    { name: '王府井', address: '北京市东城区王府井大街', location: '116.4180,39.9150' },
+    { name: '三里屯', address: '北京市朝阳区三里屯路', location: '116.4550,39.9390' }
+  ]
+  
+  // 模糊匹配关键词
+  return allPlaces.filter(place => 
+    place.name.toLowerCase().includes(keyword.toLowerCase()) ||
+    place.address.toLowerCase().includes(keyword.toLowerCase())
+  ).map(place => ({
+    id: Math.random(),
+    name: place.name,
+    address: place.address,
+    location: place.location
+  }))
+}
+
+// 初始化地图
+const initMap = async () => {
+  try {
+    console.log('开始初始化地图...')
+    
+    // 动态加载高德地图 SDK
+    const AMap = await loadAMap()
+    console.log('高德地图 SDK 加载成功，开始创建地图实例...')
+    
+    // 检查地图容器
+    const mapContainer = document.getElementById('map')
+    if (!mapContainer) {
+      throw new Error('地图容器未找到')
+    }
+    
+    // 创建地图实例
+    map = new AMap.Map('map', {
+      zoom: 13,
+      center: [116.397428, 39.90923], // 北京天安门
+      mapStyle: 'amap://styles/dark', // 深色主题
+      features: ['bg', 'road', 'building', 'point']
+    })
+    
+    console.log('地图实例创建成功，开始添加控件...')
+    
+    // 添加地图控件
+    map.addControl(new AMap.Scale())
+    map.addControl(new AMap.ToolBar())
+    
+    console.log('地图控件添加成功，开始初始化路线规划插件...')
+    
+    // 初始化路线规划插件
+    console.log('开始初始化路线规划插件...')
+    
+    // 等待一下确保所有插件都加载完成
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    console.log('插件加载完成，开始创建实例...')
+    
+    // 检查插件是否正确加载
+    console.log('AMap.Driving:', typeof AMap.Driving)
+    console.log('AMap.Walking:', typeof AMap.Walking)
+    console.log('AMap.Transfer:', typeof AMap.Transfer)
+    console.log('AMap.Geocoder:', typeof AMap.Geocoder)
+    console.log('AMap.AutoComplete:', typeof AMap.AutoComplete)
+
+    driving = new AMap.Driving({
+      map: map,
+      policy: (AMap.DrivingPolicy && AMap.DrivingPolicy.LEAST_TIME) ? AMap.DrivingPolicy.LEAST_TIME : 0
+    })
+    
+    walking = new AMap.Walking({
+      map: map,
+      policy: (AMap.WalkingPolicy && AMap.WalkingPolicy.LEAST_TIME) ? AMap.WalkingPolicy.LEAST_TIME : 0
+    })
+    
+    // v2 中公交换乘为 AMap.Transfer
+    transit = new (AMap.Transfer || function(){})({
+      map: map,
+      policy: (AMap.TransitPolicy && AMap.TransitPolicy.LEAST_TIME) ? AMap.TransitPolicy.LEAST_TIME : 0
+    })
+    
+    console.log('高德地图初始化成功')
+    
+    // 地图加载完成后的回调
+    map.on('complete', () => {
+      console.log('地图加载完成')
+    })
+    
+    map.on('error', (error) => {
+      console.error('地图错误:', error)
+    })
+    
+  } catch (error) {
+    console.error('高德地图初始化失败:', error)
+    
+    // 显示详细的错误提示
+    const mapContainer = document.getElementById('map')
+    if (mapContainer) {
+      let errorMessage = '地图加载失败'
+      
+      if (error.message.includes('API Key')) {
+        errorMessage = 'API Key 配置错误，请检查密钥设置'
+      } else if (error.message.includes('网络')) {
+        errorMessage = '网络连接失败，请检查网络设置'
+      } else if (error.message.includes('超时')) {
+        errorMessage = '加载超时，请检查网络速度'
+      } else if (error.message.includes('容器')) {
+        errorMessage = '地图容器错误，请刷新页面重试'
+      }
+      
+      mapContainer.innerHTML = `
+        <div class="map-error">
+          <h3>${errorMessage}</h3>
+          <p>错误详情: ${error.message}</p>
+          <button onclick="location.reload()" class="retry-btn">重试</button>
+        </div>
+      `
+    }
+  }
+}
+
+// 动态加载高德地图 SDK
+const loadAMap = () => {
+  return new Promise((resolve, reject) => {
+    // 检查是否已经加载
+    if (window.AMap) {
+      console.log('高德地图 SDK 已存在，直接使用')
+      resolve(window.AMap)
+      return
+    }
+    
+    console.log('开始加载高德地图 SDK...')
+    
+    // 创建 script 标签
+    const script = document.createElement('script')
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_JS_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.Driving,AMap.Walking,AMap.Transfer,AMap.Geocoder,AMap.AutoComplete`
+    script.async = true
+    
+    script.onload = () => {
+      console.log('高德地图 SDK 脚本加载完成')
+      // 等待一下确保 AMap 对象完全初始化
+      setTimeout(() => {
+        if (window.AMap) {
+          console.log('高德地图 SDK 初始化成功')
+          resolve(window.AMap)
+        } else {
+          console.error('AMap 对象未找到')
+          reject(new Error('高德地图 SDK 初始化失败：AMap 对象未找到'))
+        }
+      }, 100)
+    }
+    
+    script.onerror = (error) => {
+      console.error('高德地图 SDK 脚本加载失败:', error)
+      reject(new Error('高德地图 SDK 脚本加载失败，请检查网络连接和 API Key 配置'))
+    }
+    
+    // 设置超时
+    const timeout = setTimeout(() => {
+      reject(new Error('高德地图 SDK 加载超时，请检查网络连接'))
+    }, 10000)
+    
+    script.onload = () => {
+      clearTimeout(timeout)
+      console.log('高德地图 SDK 脚本加载完成')
+      // 等待一下确保 AMap 对象完全初始化
+      setTimeout(() => {
+        if (window.AMap) {
+          console.log('高德地图 SDK 初始化成功')
+          resolve(window.AMap)
+        } else {
+          console.error('AMap 对象未找到')
+          reject(new Error('高德地图 SDK 初始化失败：AMap 对象未找到'))
+        }
+      }, 100)
+    }
+    
+    script.onerror = (error) => {
+      clearTimeout(timeout)
+      console.error('高德地图 SDK 脚本加载失败:', error)
+      reject(new Error('高德地图 SDK 脚本加载失败，请检查网络连接和 API Key 配置'))
+    }
+    
+    document.head.appendChild(script)
+    console.log('高德地图 SDK 脚本已添加到页面')
+  })
+}
+
+// 生命周期
+onMounted(async () => {
+  // 检查是否有目的地参数
+  if (route.query.destination) {
+    destination.value = route.query.destination
+  }
+  
+  // 先初始化地图，再获取当前位置
+  await initMap()
+  
+  // 地图加载完成后再获取当前位置
+  getCurrentLocation()
+})
+
+onUnmounted(() => {
+  // 清理地图实例
+  if (map) {
+    map.destroy()
+  }
+})
 </script>
 
 <style lang="scss" scoped>
-.navigation-container {
+.navigation-page {
   min-height: 100vh;
+  background: transparent;
+  padding: 20px;
+}
+
+.search-section {
+  margin-bottom: 20px;
+}
+
+.search-container {
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  color: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
-  overflow: auto;
+  z-index: 1000;
+}
+
+.location-input {
+  position: relative;
+  z-index: 1001;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-item {
+    display: flex;
+    align-items: center;
+  gap: 12px;
+}
+
+.label {
+  color: white;
+  font-weight: 600;
+  min-width: 60px;
+}
+
+.location-input-field {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: white;
+  font-size: 14px;
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: rgba(0, 113, 227, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.locate-btn, .search-btn {
+  background: rgba(0, 113, 227, 0.8);
+    border: none;
+    border-radius: 8px;
+  padding: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+    background: rgba(0, 113, 227, 1);
+    transform: scale(1.05);
+  }
+}
+
+.locate-icon, .search-icon {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(20px);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 9999;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.suggestion-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.suggestion-name {
+  display: block;
+  color: white;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.suggestion-address {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
 }
 
 .main-content {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+    display: flex;
+  gap: 20px;
+  height: calc(100vh - 200px);
 }
 
-
-
-.search-section {
+.map-container {
+  flex: 1;
+  position: relative;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
-  padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  margin-bottom: 24px;
-
-  .search-header {
-    text-align: center;
-    margin-bottom: 20px;
-
-    .search-title {
-      font-size: 24px;
-      font-weight: bold;
-      color: #ffffff;
-      margin-bottom: 6px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .search-subtitle {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.8);
-    }
-  }
+  overflow: hidden;
+  z-index: 1;
 }
 
-.search-bar {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-  
-  .search-input-group {
-    position: relative;
-    flex: 1;
-  }
+.map {
+  width: 100%;
+  height: 100%;
+}
 
-  .search-icon {
-    position: absolute;
-    top: 50%;
-    left: 16px;
-    transform: translateY(-50%);
-    color: rgba(255, 255, 255, 0.7);
-    pointer-events: none;
-    z-index: 2;
-    
-    svg {
-      width: 20px;
-      height: 20px;
-    }
-  }
+.map-placeholder {
+    display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: white;
+  font-size: 18px;
+  background: rgba(0, 0, 0, 0.5);
+}
 
-  .search-input {
-    padding: 20px 16px 16px 48px;
+.map-error {
+      display: flex;
+  flex-direction: column;
+      align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  color: white;
+  
+  h3 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  p {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    opacity: 0.8;
+    word-break: break-word;
+  }
+  
+  .retry-btn {
+    background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-    font-size: 16px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    width: 100%;
-    transition: all 0.3s ease;
-    color: #ffffff;
-    
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.6);
-    }
-    
-    &:focus {
-      outline: none;
-      border-color: #007AFF;
-      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-    }
-  }
-
-  .clear-btn {
-    position: absolute;
-    top: 50%;
-    right: 16px;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.6);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 50%;
+    font-size: 14px;
     transition: all 0.3s ease;
     
     &:hover {
-      color: rgba(255, 255, 255, 0.9);
-      background: rgba(255, 255, 255, 0.1);
-    }
-    
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .filter-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    
-    .filter-icon {
-      position: absolute;
-      top: 55%;
-      left: 14px;
-      transform: translateY(-50%);
-      color: rgba(255, 255, 255, 0.7);
-      pointer-events: none;
-      z-index: 2;
-      
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-    }
-    
-    .filter-select-wrapper {
-      position: relative;
-      min-width: 140px;
-      
-      .filter-select {
-        width: 100%;
-        padding: 16px 16px 16px 40px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 12px;
-        font-size: 16px;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: #ffffff;
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 16px center;
-        background-size: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        
-        &:focus {
-          outline: none;
-          border-color: #007AFF;
-          background: rgba(255, 255, 255, 0.15);
-          box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-        }
-        
-        &:hover {
-          border-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        option {
-          background: rgba(0, 0, 0, 0.9);
-          color: #ffffff;
-        }
-      }
-    }
-  }
-
-  .search-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 16px 24px;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-
-    &:hover:not(:disabled) {
-      background: rgba(0, 122, 255, 0.8);
-      border-color: #007AFF;
-      color: #ffffff;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
-    }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    &:disabled {
-      background: rgba(0, 0, 0, 0.2);
-      cursor: not-allowed;
-      color: rgba(255, 255, 255, 0.4);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: none;
-    }
-
-    svg {
-      width: 20px;
-      height: 20px;
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
     }
   }
 }
 
-.selected-destinations {
+.map-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.control-btn {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+  }
+}
+
+.control-icon {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.info-panel {
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.route-info, .transport-modes, .facilities, .route-details {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.panel-title {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.route-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 20px;
-  
-  .destinations-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    
-    .destinations-label {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.8);
-      font-weight: 500;
-    }
-    
-    .clear-all-btn {
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.6);
-      cursor: pointer;
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-      
-      &:hover {
-        color: rgba(255, 255, 255, 0.9);
-        background: rgba(255, 255, 255, 0.1);
-      }
-    }
-  }
-  
-  .destinations-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .destination-tag {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(0, 122, 255, 0.2);
-    border: 1px solid rgba(0, 122, 255, 0.4);
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-    color: #ffffff;
-    
-    .tag-text {
-      font-weight: 500;
-    }
-    
-    .remove-btn {
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.7);
-      cursor: pointer;
-      font-size: 16px;
-      padding: 0;
-      line-height: 1;
-      width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-      
-      &:hover {
-        color: #ffffff;
-        background: rgba(255, 255, 255, 0.2);
-      }
-    }
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.stat-value {
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.start-navigation-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #00b4db, #0083b0);
+    border: none;
+  border-radius: 12px;
+  padding: 16px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+    cursor: pointer;
+  transition: all 0.3s ease;
+
+    &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 180, 219, 0.4);
   }
 }
 
-.hot-destinations {
+.mode-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mode-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(0, 113, 227, 0.6);
+  }
+  
+  &.active {
+    background: rgba(0, 113, 227, 0.8);
+    border-color: rgba(0, 113, 227, 1);
+  }
+}
+
+.facility-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.facility-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-
-  .hot-label {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 500;
-    white-space: nowrap;
-    min-width: 80px;
-  }
-
-  .hot-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    flex: 1;
-  }
-
-  .hot-tag {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: rgba(255, 255, 255, 0.8);
-    padding: 8px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-
-    &:hover {
-      background: rgba(0, 122, 255, 0.8);
-      color: #ffffff;
-      border-color: #007AFF;
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
+  gap: 12px;
+  padding: 8px 0;
 }
 
-.action-section {
+.facility-icon {
+  font-size: 20px;
+}
+
+.facility-name {
+  color: white;
+  font-size: 14px;
+}
+
+.steps-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.step-item {
   display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.step-number {
+  background: rgba(0, 113, 227, 0.8);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  
-  @media (max-width: 768px) {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-instruction {
+  color: white;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.step-distance {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.loading-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// 响应式设计
+@media (max-width: 1200px) {
+  .main-content {
     flex-direction: column;
-    align-items: stretch;
   }
   
-  .action-btn {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 32px;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-    
-    svg {
-      width: 20px;
-      height: 20px;
-    }
-    
-    &.primary {
-      background: rgba(0, 122, 255, 0.8);
-      color: #ffffff;
-      border: 1px solid rgba(0, 122, 255, 0.4);
-      
-      &:hover:not(:disabled) {
-        background: rgba(0, 122, 255, 1);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
-      }
-      
-      &:disabled {
-        background: rgba(0, 0, 0, 0.2);
-        border-color: rgba(255, 255, 255, 0.2);
-        cursor: not-allowed;
-        opacity: 0.6;
-      }
-    }
-    
-    &.secondary {
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      
-      &:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-      }
-      
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
+  .info-panel {
+    width: 100%;
   }
 }
 
-.routes-section {
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  margin-bottom: 24px;
-  
-  .routes-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    
-    .routes-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #ffffff;
-      margin: 0;
-    }
-  }
-  
-  .transport-selector {
-    display: flex;
-    gap: 8px;
-    
-    button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 8px 16px;
-      border-radius: 8px;
-      color: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 14px;
-      
-      &.active {
-        background: rgba(0, 122, 255, 0.8);
-        border-color: #007AFF;
-        color: #ffffff;
-      }
-      
-      &:hover {
-        transform: translateY(-1px);
-      }
-    }
-  }
-  
-  .routes-grid {
-    display: grid;
-    gap: 16px;
-  }
-  
-  .route-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(0, 122, 255, 0.3);
-      transform: translateX(4px);
-    }
-    
-    .route-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
-      
-      .route-index {
-        font-size: 24px;
-        font-weight: 700;
-        color: #007AFF;
-        background: rgba(0, 122, 255, 0.1);
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid rgba(0, 122, 255, 0.3);
-      }
-      
-      .route-info {
-        flex: 1;
-        
-        .route-name {
-          font-size: 18px;
-          font-weight: 600;
-          color: #ffffff;
-          margin: 0 0 4px 0;
-        }
-        
-        .route-description {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.7);
-          margin: 0;
-        }
-      }
-    }
-    
-    .route-stats {
-      display: flex;
-      gap: 24px;
-      
-      .stat-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 14px;
-        
-        svg {
-          width: 16px;
-          height: 16px;
-          color: #007AFF;
-        }
-      }
-    }
-  }
-}
-
-.facilities-section {
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  
-  .facilities-header {
-    margin-bottom: 20px;
-    
-    .facilities-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #ffffff;
-      margin: 0 0 16px 0;
-    }
-    
-    .facilities-filter {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      
-      span {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 6px 12px;
-        border-radius: 16px;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.8);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        
-        &.active {
-          background: rgba(0, 122, 255, 0.8);
-          border-color: #007AFF;
-          color: #ffffff;
-        }
-        
-        &:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
-      }
-    }
-  }
-  
-  .facilities-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-  
-  .facility-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(0, 122, 255, 0.3);
-      transform: translateY(-2px);
-    }
-    
-    &.selected {
-      background: rgba(0, 122, 255, 0.1);
-      border-color: #007AFF;
-    }
-    
-    .facility-icon {
-      font-size: 24px;
-      margin-bottom: 12px;
-    }
-    
-    .facility-info {
-      .facility-name {
-        font-size: 16px;
-        font-weight: 600;
-        color: #ffffff;
-        margin: 0 0 4px 0;
-      }
-      
-      .facility-distance {
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.7);
-        margin: 0;
-      }
-    }
-  }
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
-  .hero-title {
-    font-size: 36px;
+  .navigation-page {
+    padding: 10px;
   }
   
-  .search-bar {
-    flex-direction: column;
+  .input-group {
+    gap: 12px;
   }
   
-  .action-section {
-    flex-direction: column;
-  }
-  
-  .routes-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-  
-  .facilities-grid {
+  .mode-buttons {
     grid-template-columns: 1fr;
   }
 }
-</style> 
+</style>
