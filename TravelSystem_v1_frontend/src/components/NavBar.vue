@@ -11,7 +11,7 @@
         <!-- 定位图标（带省份选择功能） -->
         <div class="dock-item location-item" @click="toggleLocationMenu" @mouseenter="playLottie('location')" @mouseleave="stopLottie('location')">
           <div :ref="el => setLottieRef(el, 'location')" class="lottie-container" data-lottie-id="location"></div>
-          <div class="dock-label">选择省份</div>
+          <div class="dock-label">{{ getCurrentProvinceLabel() }}</div>
           
           <!-- 省份选择下拉菜单 -->
           <div class="location-dropdown" :class="{ 'show': showLocationMenu }">
@@ -150,11 +150,41 @@ const links = [
 
 // 省份数据
 const provinces = [
-  { name: '北京', path: '/navigation/beijing' },
-  { name: '上海', path: '/navigation/shanghai' },
-  { name: '云南', path: '/navigation/yunnan' },
-  { name: '四川', path: '/navigation/sichuan' },
-  { name: '浙江', path: '/navigation/zhejiang' }
+  { name: '无', path: '/', value: '' },
+  { name: '北京', path: '/', value: '北京' },
+  { name: '天津', path: '/', value: '天津' },
+  { name: '河北', path: '/', value: '河北' },
+  { name: '山西', path: '/', value: '山西' },
+  { name: '内蒙古', path: '/', value: '内蒙古' },
+  { name: '辽宁', path: '/', value: '辽宁' },
+  { name: '吉林', path: '/', value: '吉林' },
+  { name: '黑龙江', path: '/', value: '黑龙江' },
+  { name: '上海', path: '/', value: '上海' },
+  { name: '江苏', path: '/', value: '江苏' },
+  { name: '浙江', path: '/', value: '浙江' },
+  { name: '安徽', path: '/', value: '安徽' },
+  { name: '福建', path: '/', value: '福建' },
+  { name: '江西', path: '/', value: '江西' },
+  { name: '山东', path: '/', value: '山东' },
+  { name: '河南', path: '/', value: '河南' },
+  { name: '湖北', path: '/', value: '湖北' },
+  { name: '湖南', path: '/', value: '湖南' },
+  { name: '广东', path: '/', value: '广东' },
+  { name: '广西', path: '/', value: '广西' },
+  { name: '海南', path: '/', value: '海南' },
+  { name: '重庆', path: '/', value: '重庆' },
+  { name: '四川', path: '/', value: '四川' },
+  { name: '贵州', path: '/', value: '贵州' },
+  { name: '云南', path: '/', value: '云南' },
+  { name: '西藏', path: '/', value: '西藏' },
+  { name: '陕西', path: '/', value: '陕西' },
+  { name: '甘肃', path: '/', value: '甘肃' },
+  { name: '青海', path: '/', value: '青海' },
+  { name: '宁夏', path: '/', value: '宁夏' },
+  { name: '新疆', path: '/', value: '新疆' },
+  { name: '台湾', path: '/', value: '台湾' },
+  { name: '香港', path: '/', value: '香港' },
+  { name: '澳门', path: '/', value: '澳门' }
 ]
 
 // 设置Lottie引用
@@ -197,11 +227,23 @@ const toggleLocationMenu = () => {
 // 选择省份
 const selectProvince = (province) => {
   showLocationMenu.value = false
-  // 存储选中的省份到localStorage，供首页使用
-  localStorage.setItem('selectedProvince', province.name)
-  // 跳转到首页
-  router.push({ path: '/', query: { province: province.name } })
+  
+  if (province.name === '无') {
+    // 清除筛选
+    localStorage.removeItem('selectedProvince')
+    router.push({ path: '/', query: {} })
+  } else {
+    // 设置省份筛选
+    localStorage.setItem('selectedProvince', province.value)
+    router.push({ path: '/', query: { province: province.value } })
+  }
 }
+
+// 获取当前选中的省份标签
+const getCurrentProvinceLabel = () => {
+  const selectedProvince = provinces.find(p => p.value === localStorage.getItem('selectedProvince'));
+  return selectedProvince ? selectedProvince.name : '选择省份';
+};
 
 // 点击外部关闭菜单
 const closeMenus = (event) => {
@@ -503,6 +545,8 @@ onUnmounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
   min-width: 120px;
+  max-height: 400px;
+  overflow-y: auto;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
@@ -526,6 +570,25 @@ onUnmounted(() => {
     transform: rotate(45deg);
     border-left: 1px solid rgba(255, 255, 255, 0.2);
     border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  // 自定义滚动条样式
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 113, 227, 0.5);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(0, 113, 227, 0.7);
+    }
   }
   
   .location-dropdown-item {

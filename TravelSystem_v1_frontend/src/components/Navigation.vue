@@ -38,7 +38,7 @@
                 </svg>
                 <span v-else class="loading-spinner">⏳</span>
                 {{ isSearching ? '搜索中...' : '' }}
-            </button>
+              </button>
             </div>
           </div>
           
@@ -162,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -201,23 +201,33 @@ const transportModes = [
 
 // 获取当前位置
 const getCurrentLocation = () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords
-        startLocation.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-        startCoords.value = [Number(longitude.toFixed(6)), Number(latitude.toFixed(6))]
-        // 这里可以调用逆地理编码获取地址名称
-        reverseGeocode(latitude, longitude)
-      },
-      (error) => {
-        console.error('获取位置失败:', error)
-        startLocation.value = '定位失败'
-      }
-    )
-  } else {
+  if (!navigator.geolocation) {
     startLocation.value = '浏览器不支持定位'
+    return
   }
+  
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords
+      startCoords.value = [longitude, latitude]
+      
+      // 逆地理编码获取地址
+      await reverseGeocode(latitude, longitude)
+      
+      // 如果已经有目的地坐标，延迟自动搜索路线
+      if (destinationCoords.value && destination.value) {
+        setTimeout(() => {
+          if (map && startCoords.value && destinationCoords.value) {
+            searchRoute();
+          }
+        }, 1000); // 延迟1秒，确保地图完全加载
+      }
+    },
+    (error) => {
+      console.error('定位失败:', error)
+      startLocation.value = '定位失败，请手动输入起点'
+    }
+  )
 }
 
 // 逆地理编码 - 使用 Web服务端 Key 的 REST API
@@ -232,7 +242,7 @@ const reverseGeocode = async (lat, lng) => {
     if (data.status === '1' && data.regeocode) {
       const address = data.regeocode.formatted_address
       startLocation.value = address
-    } else {
+  } else {
       startLocation.value = `坐标: ${lat.toFixed(4)}, ${lng.toFixed(4)} (逆地理编码失败: ${data.info})`
     }
   } catch (error) {
@@ -313,7 +323,7 @@ const handleDestinationInput = async () => {
         const mockSuggestions = getMockSuggestions(destination.value)
         destinationSuggestions.value = mockSuggestions
       }
-    } catch (error) {
+      } catch (error) {
       destinationSuggestions.value = []
     }
   } else {
@@ -377,7 +387,7 @@ const showRouteOnMap = async () => {
   
   try {
     // 清除之前的路线
-    map.clearMap()
+    clearMap()
     
     // 根据选择的交通方式显示路线
     switch (selectedMode.value) {
@@ -394,7 +404,7 @@ const showRouteOnMap = async () => {
         await showBicyclingRoute()
         break
     }
-  } catch (error) {
+      } catch (error) {
     console.error('显示路线失败:', error)
   }
 }
@@ -421,7 +431,7 @@ const geocode = async (addressOrCoords) => {
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
       const location = data.geocodes[0].location
       return location.split(',').map(Number)
-    } else {
+  } else {
       // 尝试使用模拟坐标
       const mockCoords = getMockCoordinates(addressOrCoords)
       if (mockCoords) {
@@ -454,12 +464,17 @@ const showDrivingRoute = async () => {
     const data = await response.json()
     
     if (data.status === '1' && data.route && data.route.paths && data.route.paths.length > 0) {
+      const path = data.route.paths[0]
+      
+      // 在地图上绘制路径
+      await drawRouteOnMap(start, end, path.steps, 'driving')
+      
       // 构造高德地图 JS SDK 期望的数据格式
       const mockResult = {
         routes: [{
-          distance: data.route.paths[0].distance,
-          time: data.route.paths[0].duration,
-          steps: data.route.paths[0].steps.map(step => ({
+          distance: path.distance,
+          time: path.duration,
+          steps: path.steps.map(step => ({
             instruction: step.instruction,
             distance: step.distance
           }))
@@ -489,12 +504,17 @@ const showWalkingRoute = async () => {
     const data = await response.json()
     
     if (data.status === '1' && data.route && data.route.paths && data.route.paths.length > 0) {
+      const path = data.route.paths[0]
+      
+      // 在地图上绘制路径
+      await drawRouteOnMap(start, end, path.steps, 'walking')
+      
       // 构造高德地图 JS SDK 期望的数据格式
       const mockResult = {
         routes: [{
-          distance: data.route.paths[0].distance,
-          time: data.route.paths[0].duration,
-          steps: data.route.paths[0].steps.map(step => ({
+          distance: path.distance,
+          time: path.duration,
+          steps: path.steps.map(step => ({
             instruction: step.instruction,
             distance: step.distance
           }))
@@ -524,8 +544,12 @@ const showTransitRoute = async () => {
     const data = await response.json()
     
     if (data.status === '1' && data.route && data.route.transits && data.route.transits.length > 0) {
-      // 构造高德地图 JS SDK 期望的数据格式
       const transit = data.route.transits[0]
+      
+      // 在地图上绘制路径
+      await drawRouteOnMap(start, end, transit.segments, 'transit')
+      
+      // 构造高德地图 JS SDK 期望的数据格式
       const mockResult = {
         routes: [{
           distance: transit.distance,
@@ -548,35 +572,45 @@ const showTransitRoute = async () => {
 
 // 显示骑行路线（使用步行插件模拟）
 const showBicyclingRoute = async () => {
-  if (!walking) return
-  
   try {
-    // 获取起点和终点的坐标
-    const startCoords = await geocode(startLocation.value)
-    const endCoords = await geocode(destination.value)
+    const start = startCoords.value || await geocode(startLocation.value)
+    const end = destinationCoords.value || await geocode(destination.value)
+    if (!start || !end) return alert('无法获取起终点坐标')
     
-    if (!startCoords || !endCoords) {
-      alert('无法获取起点或终点的坐标，请检查地址输入')
-      return
-    }
+    // 自行车路线规划（使用步行路线作为替代）
+    const response = await fetch(
+      `https://restapi.amap.com/v3/direction/walking?key=${AMAP_REST_KEY}&origin=${start[0]},${start[1]}&destination=${end[0]},${end[1]}&extensions=all&output=json`
+    )
+    const data = await response.json()
     
-    // 使用坐标进行路线规划
-    walking.search(startCoords, endCoords, (status, result) => {
-      if (status === 'complete') {
-        console.log('骑行路线规划完成:', result)
-        updateRouteInfo(result, 'bicycling')
-      } else {
-        console.error('骑行路线规划失败:', result)
-        alert('路线规划失败，请稍后重试')
+    if (data.status === '1' && data.route && data.route.paths && data.route.paths.length > 0) {
+      const path = data.route.paths[0]
+      
+      // 在地图上绘制路径
+      await drawRouteOnMap(start, end, path.steps, 'bicycling')
+      
+      // 构造高德地图 JS SDK 期望的数据格式
+      const mockResult = {
+        routes: [{
+          distance: path.distance,
+          time: Math.round(path.duration * 0.4), // 自行车速度约为步行的2.5倍
+          steps: path.steps.map(step => ({
+            instruction: step.instruction,
+            distance: step.distance
+          }))
+        }]
       }
-    })
-  } catch (error) {
-    console.error('骑行路线规划出错:', error)
-    alert('路线规划出错，请稍后重试')
+      
+      updateRouteInfo(mockResult, 'bicycling')
+    } else {
+      alert('路线规划失败: ' + (data.info || '未知错误'))
+    }
+  } catch (e) {
+    alert('路线规划出错: ' + e.message)
   }
 }
 
-// 更新路线信息
+    // 更新路线信息
 const updateRouteInfo = (result, mode) => {
   if (!result || !result.routes || result.routes.length === 0) return
   
@@ -597,7 +631,16 @@ const updateRouteInfo = (result, mode) => {
   
   // 调整地图视野
   if (map) {
-    map.setFitView()
+    try {
+      // 如果有起点和终点坐标，调整视野
+      if (startCoords.value && destinationCoords.value) {
+        const bounds = new AMap.Bounds(startCoords.value, destinationCoords.value);
+        map.setBounds(bounds, true, [50, 50, 50, 50]);
+      }
+  } catch (error) {
+      // 如果调整视野失败，忽略错误
+      console.warn('调整地图视野失败:', error);
+    }
   }
 }
 
@@ -642,13 +685,73 @@ const startNavigation = async () => {
   }
 }
 
+// 监听目的地坐标变化，自动搜索路线
+watch([destinationCoords, startCoords], ([newDestCoords, newStartCoords], [oldDestCoords, oldStartCoords]) => {
+  // 如果目的地坐标和起点坐标都准备好了，且地图已加载，自动搜索
+  if (newDestCoords && newStartCoords && map && startLocation.value !== '正在获取位置...') {
+    // 避免重复搜索
+    if (JSON.stringify(newDestCoords) !== JSON.stringify(oldDestCoords) || 
+        JSON.stringify(newStartCoords) !== JSON.stringify(oldStartCoords)) {
+      setTimeout(() => {
+        if (map && startCoords.value && destinationCoords.value) {
+          searchRoute();
+        }
+      }, 500);
+    }
+  }
+}, { deep: true, immediate: true });
+
+// 预填充目的地信息
+const prefillDestination = async (name, coords = null) => {
+  destination.value = name;
+  
+  if (coords) {
+    destinationCoords.value = coords;
+  } else {
+    // 尝试地理编码获取坐标
+    try {
+      const geocodedCoords = await geocode(name);
+      if (geocodedCoords) {
+        destinationCoords.value = geocodedCoords;
+      }
+    } catch (error) {
+      console.error('地理编码出错:', error);
+    }
+  }
+  
+  // 如果已经有起点和终点坐标，立即搜索路线
+  if (startCoords.value && destinationCoords.value && startLocation.value !== '正在获取位置...' && map) {
+    searchRoute();
+  }
+};
+
+// 清除地图上的所有内容
+const clearMap = () => {
+  if (map) {
+    try {
+      // 清除所有覆盖物
+      map.clearMap();
+    } catch (error) {
+      // 如果 clearMap 失败，尝试手动清除
+      try {
+        // 获取所有覆盖物并移除
+        const overlays = map.getAllOverlays();
+        overlays.forEach(overlay => {
+          map.remove(overlay);
+        });
+      } catch (e) {
+        console.warn('清除地图内容失败:', e);
+      }
+    }
+  }
+};
+
 // 重置地图
 const resetMap = () => {
-  if (map) {
-    map.setZoom(13)
-    map.setCenter([116.397428, 39.90923])
-  }
-}
+  clearMap();
+  // 重新获取当前位置
+  getCurrentLocation();
+};
 
 // 获取交通方式标签
 const getTransportModeLabel = (mode) => {
@@ -682,6 +785,96 @@ const getMockSuggestions = (keyword) => {
     location: place.location
   }))
 }
+
+// 在地图上绘制路线
+const drawRouteOnMap = async (startCoords, endCoords, steps, mode) => {
+  if (!map) return;
+
+  // 清除之前的路线
+  clearMap();
+
+  // 确保坐标格式正确
+  const start = Array.isArray(startCoords) ? startCoords : [startCoords.lng || startCoords[0], startCoords.lat || startCoords[1]];
+  const end = Array.isArray(endCoords) ? endCoords : [endCoords.lng || endCoords[0], endCoords.lat || endCoords[1]];
+
+  // 添加起点标记
+  const startMarker = new AMap.Marker({
+    position: start,
+    icon: 'https://webapi.amap.com/theme/v1.3/markers/b/start.png',
+    offset: new AMap.Pixel(-13, -30)
+  });
+  map.add(startMarker);
+
+  // 添加终点标记
+  const endMarker = new AMap.Marker({
+    position: end,
+    icon: 'https://webapi.amap.com/theme/v1.3/markers/b/end.png',
+    offset: new AMap.Pixel(-13, -30)
+  });
+  map.add(endMarker);
+
+  // 根据交通方式绘制不同的路径
+  if (mode === 'driving' || mode === 'walking' || mode === 'bicycling') {
+    // 驾车、步行和自行车：使用步骤中的坐标点
+    const pathCoords = [];
+    
+    // 添加起点
+    pathCoords.push(start);
+    
+    // 处理步骤中的坐标（如果有的话）
+    if (steps && steps.length > 0) {
+      steps.forEach(step => {
+        if (step.polyline) {
+          // 如果有 polyline 字段，解析坐标
+          const coords = step.polyline.split(';').map(coord => {
+            const [lng, lat] = coord.split(',').map(Number);
+            return [lng, lat];
+          });
+          pathCoords.push(...coords);
+        }
+      });
+    }
+    
+    // 添加终点
+    pathCoords.push(end);
+    
+    // 绘制路径线
+    if (pathCoords.length > 1) {
+      const path = new AMap.Polyline({
+        path: pathCoords,
+        strokeColor: mode === 'driving' ? '#00b4db' : (mode === 'walking' ? '#66ccff' : '#99ccff'),
+        strokeWeight: 6,
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid'
+      });
+      map.add(path);
+    }
+  } else if (mode === 'transit') {
+    // 公交：绘制直线路径（简化处理）
+    const path = new AMap.Polyline({
+      path: [start, end],
+      strokeColor: '#ff9900',
+      strokeWeight: 6,
+      strokeOpacity: 0.8,
+      strokeStyle: 'dashed',
+      strokeDasharray: [10, 5]
+    });
+    map.add(path);
+  }
+
+  // 调整地图视野，显示起点和终点
+  try {
+    // 使用 setBounds 替代 setFitView
+    const bounds = new AMap.Bounds(start, end);
+    map.setBounds(bounds, true, [50, 50, 50, 50]);
+  } catch (error) {
+    // 如果 setBounds 失败，使用 setCenter 和 setZoom
+    const centerLng = (start[0] + end[0]) / 2;
+    const centerLat = (start[1] + end[1]) / 2;
+    map.setCenter([centerLng, centerLat]);
+    map.setZoom(12);
+  }
+};
 
 // 初始化地图
 const initMap = async () => {
@@ -854,16 +1047,25 @@ const loadAMap = () => {
 
 // 生命周期
 onMounted(async () => {
-  // 检查是否有目的地参数
-  if (route.query.destination) {
-    destination.value = route.query.destination
-  }
-  
   // 先初始化地图，再获取当前位置
   await initMap()
   
   // 地图加载完成后再获取当前位置
   getCurrentLocation()
+  
+  // 检查是否有目的地参数并预填充（延迟执行，确保地图完全加载）
+  if (route.query.destination) {
+    let coords = null;
+    if (route.query.destinationCoords) {
+      const [lng, lat] = route.query.destinationCoords.split(',').map(Number);
+      coords = [lng, lat];
+    }
+    
+    // 延迟预填充，确保地图和位置信息都准备好
+    setTimeout(() => {
+      prefillDestination(route.query.destination, coords);
+    }, 3000); // 延迟3秒，确保地图完全加载
+  }
 })
 
 onUnmounted(() => {
@@ -888,12 +1090,12 @@ onUnmounted(() => {
 .search-container {
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(20px);
-  border-radius: 16px;
+    border-radius: 16px;
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
   z-index: 1000;
-}
+  }
 
 .location-input {
   position: relative;

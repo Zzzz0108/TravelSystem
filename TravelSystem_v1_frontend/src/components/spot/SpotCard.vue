@@ -147,9 +147,26 @@ const goToNavigation = () => {
   // 先增加浏览量
   spotStore.incrementViews(props.spot.id);
   
-  // TODO: 跳转导航页面，传递目的地信息
-  // 这里可以先跳转到导航页面，后续实现导航功能
-  router.push('/navigation');
+  // 尝试多种可能的坐标字段
+  let coords = null;
+  if (props.spot.latitude && props.spot.longitude) {
+    coords = `${props.spot.longitude},${props.spot.latitude}`;
+  } else if (props.spot.lat && props.spot.lng) {
+    coords = `${props.spot.lng},${props.spot.lat}`;
+  } else if (props.spot.x && props.spot.y) {
+    coords = `${props.spot.x},${props.spot.y}`;
+  } else if (props.spot.coordinates) {
+    coords = props.spot.coordinates;
+  }
+  
+  // 跳转导航页面，传递目的地信息
+  router.push({
+    path: '/navigation',
+    query: {
+      destination: props.spot.name,
+      destinationCoords: coords
+    }
+  });
 }
 
 // 相关日记 - 跳转日记页面并搜索
