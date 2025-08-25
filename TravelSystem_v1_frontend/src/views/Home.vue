@@ -122,10 +122,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { debounce } from 'lodash-es'
 import SpotCard from '@/components/spot/SpotCard.vue'
 import { useSpotStore } from '@/stores/spotStore'
+import { useUserStore } from '@/stores/userStore'
 
 const route = useRoute()
 const router = useRouter()
 const spotStore = useSpotStore()
+const userStore = useUserStore()
 const searchKeyword = ref('')
 const selectedType = ref('')
 const selectedProvince = ref('')

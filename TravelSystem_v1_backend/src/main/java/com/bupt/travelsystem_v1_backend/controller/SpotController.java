@@ -27,9 +27,12 @@ public class SpotController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Spot> getSpotById(@PathVariable Long id) {
-        Optional<Spot> spot = spotService.getSpotById(id);
-        return spot.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            Spot detail = spotService.getSpotDetail(id);
+            return ResponseEntity.ok(detail);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     @PostMapping
@@ -48,9 +51,9 @@ public class SpotController {
         spotService.deleteSpot(id);
     }
 
-    @PostMapping("/{id}/increment-popularity")
-    public Spot incrementPopularity(@PathVariable Long id) {
-        return spotService.incrementPopularity(id);
+    @PostMapping("/{id}/increment-views")
+    public Spot incrementViews(@PathVariable Long id) {
+        return spotService.incrementViews(id);
     }
 
     @GetMapping("/search")
@@ -127,6 +130,16 @@ public class SpotController {
     @GetMapping("/{id}/rating/count")
     public ResponseEntity<Long> getRatingCount(@PathVariable Long id) {
         return ResponseEntity.ok(spotService.getRatingCount(id));
+    }
+    
+    @GetMapping("/{id}/favorite-count")
+    public ResponseEntity<Integer> getFavoriteCount(@PathVariable Long id) {
+        try {
+            Integer favoriteCount = spotService.getFavoriteCount(id);
+            return ResponseEntity.ok(favoriteCount);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
     
     @GetMapping("/recommended")

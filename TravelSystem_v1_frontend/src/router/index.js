@@ -43,6 +43,12 @@ const router = createRouter({
       props: true
     },
     {
+      path: '/spot/:id',
+      name: 'SpotDetail',
+      component: () => import('@/views/SpotDetail.vue'),
+      props: true
+    },
+    {
       path: '/navigation',
       name: 'Navigation',
       component: () => import('@/views/NavigationView.vue')

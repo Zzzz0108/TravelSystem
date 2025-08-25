@@ -5,7 +5,7 @@
     @click.stop="handleClick"
   >
     <img 
-      :src="isFavorited ? '/src/assets/icon/like.svg' : '/src/assets/icon/like.svg'"
+      src="@/assets/icon/like.svg"
       :class="['heart-icon', { 'favorited': isFavorited }]"
       alt="收藏"
     />
@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useSpotStore } from '@/stores/spotStore'
 
 const props = defineProps({
@@ -30,25 +30,51 @@ const props = defineProps({
 const emit = defineEmits(['update:favorited'])
 
 const spotStore = useSpotStore()
-const isFavorited = ref(props.initialFavorited)
+
+// 使用计算属性来实时获取收藏状态，确保与 store 同步
+const isFavorited = computed(() => {
+  return spotStore.favoriteSpots.some(spot => spot.id === props.spotId)
+})
+
+// 监听 store 中收藏列表的变化
+watch(() => spotStore.favoriteSpots, () => {
+  // 当收藏列表变化时，通知父组件
+  const currentStatus = isFavorited.value
+  emit('update:favorited', currentStatus)
+}, { deep: true })
 
 const handleClick = async () => {
   try {
+    console.log('FavoriteButton 点击，景点ID:', props.spotId, '当前状态:', isFavorited.value)
     const success = await spotStore.toggleFavorite(props.spotId)
-    isFavorited.value = success
+    console.log('toggleFavorite 返回结果:', success)
+    
+    // 发送全局事件通知其他组件
+    const event = new CustomEvent('favorite-updated', {
+      detail: {
+        spotId: props.spotId,
+        isFavorited: success,
+        action: success ? 'added' : 'removed'
+      }
+    })
+    window.dispatchEvent(event)
+    console.log('已发送全局事件:', event.detail)
+    
     emit('update:favorited', success)
   } catch (error) {
-    console.error('FavoriteButton: 收藏操作失败', {
-      error,
-      spotId: props.spotId,
-      timestamp: new Date().toISOString()
-    });
+    console.error('收藏操作失败:', error)
+    // 刷新收藏列表以确保状态一致
     await spotStore.fetchFavoriteSpots()
-    const isCurrentlyFavorited = spotStore.favoriteSpots.some(spot => spot.id === props.spotId)
-    isFavorited.value = isCurrentlyFavorited
-    emit('update:favorited', isCurrentlyFavorited)
   }
 }
+
+// 组件挂载时确保收藏状态正确
+onMounted(async () => {
+  // 如果 store 中还没有收藏列表，先获取一次
+  if (spotStore.favoriteSpots.length === 0) {
+    await spotStore.fetchFavoriteSpots()
+  }
+})
 </script>
 
 <style scoped>

@@ -169,6 +169,8 @@ onMounted(() => {
   position: relative;
   width: 280px;
   margin: 8px;
+  height: fit-content;
+  min-height: 400px; /* 确保最小高度一致 */
   
   &:hover {
     transform: translateY(-8px) scale(1.02);
@@ -232,11 +234,15 @@ onMounted(() => {
 
 .card-content {
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 200px; /* 确保内容区域最小高度 */
   
   .title {
     font-size: 18px;
     font-weight: 700;
-    margin: 0 0 16px;
+    margin: 0 0 12px;
     color: #ffffff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     line-height: 1.3;
@@ -244,6 +250,7 @@ onMounted(() => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    min-height: 2.6em; /* 确保标题高度一致 */
   }
   
   .content {
@@ -251,20 +258,22 @@ onMounted(() => {
     line-height: 1.6;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     text-overflow: ellipsis;
-    max-height: 3.2em;
-    word-break: break-all;
+    max-height: 4.8em; /* 3行文本的高度 */
+    word-break: break-word;
     font-size: 14px;
+    flex: 1; /* 让内容区域占据剩余空间 */
+    min-height: 4.8em; /* 确保内容区域最小高度 */
   }
   
   .meta {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     
     .author {
       color: rgba(255, 255, 255, 0.7);
@@ -282,7 +291,7 @@ onMounted(() => {
 .action-bar {
   display: flex;
   gap: 24px;
-  margin-top: 20px;
+  margin-top: auto; /* 让操作栏始终在底部 */
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;

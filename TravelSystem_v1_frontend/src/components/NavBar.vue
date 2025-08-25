@@ -593,7 +593,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  color: #000000 !important;
   text-decoration: none;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -605,7 +604,7 @@ onUnmounted(() => {
   font-weight: 500;
   
   span {
-    color: #000000;
+    color: #ffffffd8;
   }
   
   &:hover {

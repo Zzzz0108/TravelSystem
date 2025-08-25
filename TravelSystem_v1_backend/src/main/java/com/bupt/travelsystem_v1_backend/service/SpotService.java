@@ -12,7 +12,7 @@ public interface SpotService {
     Optional<Spot> getSpotById(Long id);
     Spot saveSpot(Spot spot);
     void deleteSpot(Long id);
-    Spot incrementPopularity(Long id);
+    Spot incrementViews(Long id);
     List<Spot> getUserFavorites();
     boolean toggleFavorite(Long spotId);
     
@@ -23,4 +23,10 @@ public interface SpotService {
     
     // 获取推荐景点（综合评分和热度）
     List<Spot> getRecommendedSpots(int limit);
+    
+    // 获取景点详情（包含 isFavorited 与 userRating）
+    Spot getSpotDetail(Long id);
+    
+    // 获取景点收藏人数
+    Integer getFavoriteCount(Long id);
 } 

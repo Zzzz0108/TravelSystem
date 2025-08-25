@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 @Service
 public class SpotServiceImpl implements SpotService {
@@ -144,10 +145,18 @@ public class SpotServiceImpl implements SpotService {
 
     @Override
     @Transactional
-    public Spot incrementPopularity(Long id) {
+    public Spot incrementViews(Long id) {
         Spot spot = getSpotById(id)
                 .orElseThrow(() -> new RuntimeException("Spot not found"));
-        spot.setPopularity(spot.getPopularity() + 1);
+        
+        // 增加浏览量
+        spot.setViews(spot.getViews() + 1);
+        
+        // 根据浏览量计算热度：views * 0.6 + 收藏数 * 0.4
+        int favoriteCount = spot.getFavoritedBy() != null ? spot.getFavoritedBy().size() : 0;
+        int newPopularity = (int) Math.round(spot.getViews() * 0.6 + favoriteCount * 0.4);
+        spot.setPopularity(newPopularity);
+        
         spot = spotRepository.save(spot);
         spotRepository.flush(); // 确保立即更新数据库
         return spot;
@@ -171,26 +180,45 @@ public class SpotServiceImpl implements SpotService {
     @Transactional
     public boolean toggleFavorite(Long spotId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("用户未登录");
+        }
+        
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Spot spot = spotRepository.findById(spotId)
-                .orElseThrow(() -> new RuntimeException("Spot not found"));
-
-        boolean isFavorited = spot.getFavoritedBy().contains(user);
-        if (isFavorited) {
-            spot.getFavoritedBy().remove(user);
-            user.getFavoriteSpots().remove(spot);
-            spotRepository.save(spot);
-            userRepository.save(user);
+            .orElseThrow(() -> new RuntimeException("用户不存在"));
+        
+        Spot spot = getSpotById(spotId)
+            .orElseThrow(() -> new RuntimeException("景点不存在"));
+        
+        Set<User> favoritedBy = spot.getFavoritedBy();
+        Set<Spot> userFavorites = user.getFavoriteSpots();
+        boolean wasFavorited = favoritedBy.contains(user);
+        
+        if (wasFavorited) {
+            // 取消收藏：从两个集合中移除
+            favoritedBy.remove(user);
+            userFavorites.remove(spot);
         } else {
-            spot.getFavoritedBy().add(user);
-            user.getFavoriteSpots().add(spot);
-            spotRepository.save(spot);
-            userRepository.save(user);
+            // 添加收藏：向两个集合中添加
+            favoritedBy.add(user);
+            userFavorites.add(spot);
         }
-        return !isFavorited;
+        
+        // 保存两个实体，确保中间表关系同步更新
+        spot.setFavoritedBy(favoritedBy);
+        user.setFavoriteSpots(userFavorites);
+        
+        // 更新景点的热度分数：views * 0.6 + 收藏数 * 0.4
+        int favoriteCount = favoritedBy.size();
+        int newPopularity = (int) Math.round(spot.getViews() * 0.6 + favoriteCount * 0.4);
+        spot.setPopularity(newPopularity);
+        
+        spotRepository.save(spot);
+        userRepository.save(user);
+        
+        // 返回操作后的实际收藏状态（与之前相反）
+        return !wasFavorited;
     }
 
     @Override
@@ -198,32 +226,20 @@ public class SpotServiceImpl implements SpotService {
     public Spot rateSpot(Long spotId, Integer rating) {
         try {
             System.out.println("=== SpotServiceImpl.rateSpot ===");
-            System.out.println("景点ID: " + spotId);
-            System.out.println("评分: " + rating);
+            System.out.println("景点ID: " + spotId + ", 评分: " + rating);
             
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()) {
-                System.out.println("错误: 用户未认证");
-                throw new RuntimeException("用户未认证");
+                throw new RuntimeException("用户未登录");
             }
             
             String username = authentication.getName();
-            System.out.println("用户名: " + username);
-            
             User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> {
-                        System.out.println("错误: 找不到用户");
-                        return new RuntimeException("用户不存在");
-                    });
-            System.out.println("用户ID: " + user.getId());
-
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+            
             Spot spot = getSpotById(spotId)
-                    .orElseThrow(() -> {
-                        System.out.println("错误: 找不到景点");
-                        return new RuntimeException("景点不存在");
-                    });
-            System.out.println("景点名称: " + spot.getName());
-
+                .orElseThrow(() -> new RuntimeException("景点不存在"));
+            
             // 检查是否已经评分过
             if (spotRatingRepository.existsBySpotAndUser(spot, user)) {
                 System.out.println("用户已经评分过，更新评分");
@@ -236,18 +252,20 @@ public class SpotServiceImpl implements SpotService {
                 SpotRating spotRating = new SpotRating(spot, user, rating);
                 spotRatingRepository.save(spotRating);
             }
-
+            
             // 更新平均评分
             Double averageRating = spotRatingRepository.getAverageRatingBySpot(spot);
             Long ratingCount = spotRatingRepository.getRatingCountBySpot(spot);
             System.out.println("平均评分: " + averageRating);
             System.out.println("评分数量: " + ratingCount);
-
-            // 更新景点的热度分数
-            spot.setPopularity(spot.getPopularity() + 1);
+            
+            // 更新景点的热度分数：views * 0.6 + 收藏数 * 0.4
+            int favoriteCount = spot.getFavoritedBy() != null ? spot.getFavoritedBy().size() : 0;
+            int newPopularity = (int) Math.round(spot.getViews() * 0.6 + favoriteCount * 0.4);
+            spot.setPopularity(newPopularity);
             spot = spotRepository.save(spot);
-            System.out.println("景点热度更新成功");
-
+            System.out.println("景点热度更新成功，新热度: " + newPopularity);
+            
             return spot;
         } catch (Exception e) {
             System.out.println("评分失败: " + e.getMessage());
@@ -393,5 +411,46 @@ public class SpotServiceImpl implements SpotService {
             e.printStackTrace();
             throw new RuntimeException("获取推荐景点失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Spot getSpotDetail(Long id) {
+        Spot spot = spotRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("景点不存在"));
+        
+        // 填充登录相关字段
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+            User user = userRepository.findByUsername(username).orElse(null);
+            if (user != null) {
+                boolean favorited = spot.getFavoritedBy() != null && spot.getFavoritedBy().contains(user);
+                spot.setIsFavorited(favorited);
+                
+                SpotRating rating = spotRatingRepository.findBySpotAndUser(spot, user).orElse(null);
+                spot.setUserRating(rating != null ? rating.getRating() : null);
+            }
+        }
+        
+        return spot;
+    }
+    
+    @Override
+    public Integer getFavoriteCount(Long id) {
+        Spot spot = spotRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("景点不存在"));
+        
+        // 返回收藏人数
+        return spot.getFavoritedBy() != null ? spot.getFavoritedBy().size() : 0;
+    }
+    
+    /**
+     * 更新景点的热度分数
+     * 热度 = views * 0.6 + 收藏数 * 0.4
+     */
+    private void updateSpotPopularity(Spot spot) {
+        int favoriteCount = spot.getFavoritedBy() != null ? spot.getFavoritedBy().size() : 0;
+        int newPopularity = (int) Math.round(spot.getViews() * 0.6 + favoriteCount * 0.4);
+        spot.setPopularity(newPopularity);
     }
 } 

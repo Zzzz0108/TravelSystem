@@ -44,13 +44,41 @@
           :spot-id="spot.id"
           :initial-favorited="isFavorite"
         />
+        
+        <div class="action-buttons">
+          <button 
+            class="action-btn go-here-btn"
+            @click.stop="goToNavigation"
+            title="去这里"
+          >
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            去这里
+          </button>
+          
+          <button 
+            class="action-btn diary-btn"
+            @click.stop="goToDiaries"
+            title="相关日记"
+          >
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10,9 9,9 8,9"/>
+            </svg>
+            相关日记
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import FavoriteButton from '@/components/common/FavoriteButton.vue'
 import { useSpotStore } from '@/stores/spotStore'
@@ -79,27 +107,65 @@ const isFavorite = computed(() => {
   return spotStore.favoriteSpots.some(s => s.id === props.spot.id)
 })
 
-const handleCardClick = async (event) => {
-  // 如果点击的是收藏按钮或其子元素，不进行跳转
-  if (event.target.closest('.action-bar') || event.target.closest('.favorite-button')) {
-    console.log('点击了收藏按钮，不进行跳转');
-    return;
+// 监听收藏状态变化，实时更新
+watch(() => spotStore.favoriteSpots, () => {}, { deep: true })
+
+// 监听props.spot.id的变化
+watch(() => props.spot.id, () => {}, { immediate: true })
+
+// 监听全局收藏状态变化事件
+onMounted(() => {
+  const handleFavoriteUpdate = (event) => {
+    if (event.detail.spotId === props.spot.id) {
+      nextTick(() => {})
+    }
   }
+  window.addEventListener('favorite-updated', handleFavoriteUpdate)
+  onUnmounted(() => {
+    window.removeEventListener('favorite-updated', handleFavoriteUpdate)
+  })
+})
+
+  // 处理卡片点击
+  const handleCardClick = async () => {
+    try {
+      // 增加浏览量
+      await spotStore.incrementViews(props.spot.id);
+      // 导航到景点详情页
+      router.push(`/spot/${props.spot.id}`);
+    } catch (error) {
+      console.error('导航失败:', error);
+      // 即使增加浏览量失败，也继续导航
+      router.push(`/spot/${props.spot.id}`);
+    }
+  };
+
+// 去这里 - 跳转导航页面
+const goToNavigation = () => {
+  if (!props.spot || !props.spot.id) return;
   
-  console.log('点击了卡片，准备跳转');
-  if (!props.spot || !props.spot.id) {
-    console.error('无效的景点数据');
-    return;
-  }
+  // 先增加浏览量
+  spotStore.incrementViews(props.spot.id);
   
-  try {
-    await spotStore.incrementPopularity(props.spot.id);
-    router.push('/navigation');
-  } catch (error) {
-    console.error('增加热度失败:', error);
-    // 即使增加热度失败，也进行跳转
-    router.push('/navigation');
-  }
+  // TODO: 跳转导航页面，传递目的地信息
+  // 这里可以先跳转到导航页面，后续实现导航功能
+  router.push('/navigation');
+}
+
+// 相关日记 - 跳转日记页面并搜索
+const goToDiaries = () => {
+  if (!props.spot || !props.spot.id) return;
+  
+  // 先增加浏览量（非阻塞）
+  spotStore.incrementViews(props.spot.id).catch(() => {})
+  
+  // 仅按目的地搜索：传城市
+  router.push({
+    path: '/diary',
+    query: {
+      destination: props.spot.city
+    }
+  });
 }
 </script>
 
@@ -241,9 +307,68 @@ const handleCardClick = async (event) => {
 
 .action-bar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  .btn-icon {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+}
+
+.go-here-btn {
+  &:hover {
+    background: rgba(0, 122, 255, 0.6);
+    border-color: rgba(0, 122, 255, 0.3);
+    color: #ffffff;
+  }
+}
+
+.diary-btn {
+  &:hover {
+    background: rgba(255, 45, 85, 0.6);
+    border-color: rgba(255, 45, 85, 0.3);
+    color: #ffffff;
+  }
 }
 </style> 

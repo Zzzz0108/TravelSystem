@@ -87,17 +87,28 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useDiaryStore } from '@/stores/diaryStore'
 import DiaryCard from '@/components/diary/DiaryCard.vue'
 import FloatingActionButton from '@/components/common/FloatingActionButton.vue'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
 const diaryStore = useDiaryStore()
 const searchQuery = ref('')
 const searchMode = ref('destination') // 默认搜索模式为目的地
+
+// 根据 destination 查询参数进行搜索
+const applyDestinationFromRoute = async () => {
+  const dest = route.query.destination
+  if (typeof dest === 'string' && dest.trim()) {
+    searchMode.value = 'destination'
+    searchQuery.value = dest.trim()
+    await diaryStore.searchDiaries(searchQuery.value, 'destination')
+  }
+}
 
 // 初始化数据
 const initData = async () => {
@@ -108,22 +119,29 @@ const initData = async () => {
   }
 }
 
-// 组件挂载时获取数据
-onMounted(() => {
-  initData()
+// 组件挂载时：若路由带destination则按目的地搜索，否则加载默认数据
+onMounted(async () => {
+  const hasDestination = typeof route.query.destination === 'string' && route.query.destination.trim()
+  if (hasDestination) {
+    await applyDestinationFromRoute()
+  } else {
+    await initData()
+  }
+})
+
+// 监听路由变更（支持从其他页带 destination 返回）
+watch(() => route.query.destination, async (newVal, oldVal) => {
+  if (typeof newVal === 'string' && newVal.trim()) {
+    await applyDestinationFromRoute()
+  }
 })
 
 const handleSearch = () => {
   if (!searchQuery.value || !searchQuery.value.trim()) {
-    // 如果没有搜索内容，重新获取所有日记
     initData();
     return;
   }
-  
-  // 有搜索内容时才进行搜索
   const trimmedQuery = searchQuery.value.trim();
-  console.log('搜索关键词:', trimmedQuery);
-  console.log('搜索模式:', searchMode.value);
   diaryStore.searchDiaries(trimmedQuery, searchMode.value);
 };
 
@@ -132,18 +150,8 @@ const clearSearch = () => {
   initData();
 }
 
-// 数据过滤
+// 数据过滤（直接展示 store 结果）
 const filteredDiaries = computed(() => {
-  console.log('Current diaries:', diaryStore.diaries);
-  console.log('Search query:', searchQuery.value);
-  console.log('Search mode:', searchMode.value);
-  
-  // 如果后端已经返回了搜索结果，直接使用
-  if (searchQuery.value) {
-    return diaryStore.diaries;
-  }
-  
-  // 如果没有搜索内容，显示所有日记
   return diaryStore.diaries;
 })
 
@@ -158,7 +166,7 @@ const openEditor = () => {
 // 热门搜索标签
 const hotSearchTags = [
   '日本樱花', '欧洲古城', '东南亚海岛', '美国西部', '澳洲大堡礁', 
-  '非洲草原', '南美雨林', '北欧极光', '中东古迹', '印度泰姬陵'
+  '川藏线', '新疆自驾', '云南秘境', '青海湖日出', '内蒙古草原'
 ]
 
 const searchByTag = (tag) => {
