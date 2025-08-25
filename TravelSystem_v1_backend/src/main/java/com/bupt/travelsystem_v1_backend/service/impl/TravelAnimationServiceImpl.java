@@ -36,7 +36,14 @@ public class TravelAnimationServiceImpl implements TravelAnimationService {
             List<MultipartFile> images,
             TravelAnimation.AnimationStyle style,
             Integer duration,
-            TravelAnimation.MusicType musicType) {
+            TravelAnimation.MusicType musicType,
+            TravelAnimation.TransitionEffect transitionEffect,
+            String subtitleText,
+            TravelAnimation.SubtitleStyle subtitleStyle,
+            Boolean autoEnhance,
+            Boolean removeNoise,
+            Boolean colorCorrection,
+            Boolean faceBeautify) {
         
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new RuntimeException("用户不存在"));
@@ -47,6 +54,13 @@ public class TravelAnimationServiceImpl implements TravelAnimationService {
         animation.setStyle(style);
         animation.setDuration(duration);
         animation.setMusicType(musicType);
+        animation.setTransitionEffect(transitionEffect);
+        animation.setSubtitleText(subtitleText);
+        animation.setSubtitleStyle(subtitleStyle);
+        animation.setAutoEnhance(autoEnhance);
+        animation.setRemoveNoise(removeNoise);
+        animation.setColorCorrection(colorCorrection);
+        animation.setFaceBeautify(faceBeautify);
         animation.setStatus(TravelAnimation.AnimationStatus.PENDING);
 
         // 保存图片

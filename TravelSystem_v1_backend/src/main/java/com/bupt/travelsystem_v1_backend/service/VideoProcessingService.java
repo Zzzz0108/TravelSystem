@@ -27,4 +27,32 @@ public interface VideoProcessingService {
      * @param outputPath 输出路径
      */
     void addBackgroundMusic(String videoPath, TravelAnimation.MusicType musicType, String outputPath);
+
+    /**
+     * 应用转场效果
+     * @param videoPath 视频路径
+     * @param transitionEffect 转场效果
+     * @param outputPath 输出路径
+     */
+    void applyTransitionEffect(String videoPath, TravelAnimation.TransitionEffect transitionEffect, String outputPath);
+
+    /**
+     * 添加字幕
+     * @param videoPath 视频路径
+     * @param subtitleText 字幕文本
+     * @param subtitleStyle 字幕样式
+     * @param outputPath 输出路径
+     */
+    void addSubtitle(String videoPath, String subtitleText, TravelAnimation.SubtitleStyle subtitleStyle, String outputPath);
+
+    /**
+     * 智能图片增强
+     * @param inputPath 输入图片路径
+     * @param outputPath 输出图片路径
+     * @param autoEnhance 自动增强
+     * @param removeNoise 降噪
+     * @param colorCorrection 色彩校正
+     * @param faceBeautify 人像美化
+     */
+    void enhanceImage(String inputPath, String outputPath, boolean autoEnhance, boolean removeNoise, boolean colorCorrection, boolean faceBeautify);
 } 

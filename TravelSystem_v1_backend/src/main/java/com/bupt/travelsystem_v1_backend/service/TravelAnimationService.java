@@ -14,7 +14,14 @@ public interface TravelAnimationService {
         List<MultipartFile> images,
         TravelAnimation.AnimationStyle style,
         Integer duration,
-        TravelAnimation.MusicType musicType
+        TravelAnimation.MusicType musicType,
+        TravelAnimation.TransitionEffect transitionEffect,
+        String subtitleText,
+        TravelAnimation.SubtitleStyle subtitleStyle,
+        Boolean autoEnhance,
+        Boolean removeNoise,
+        Boolean colorCorrection,
+        Boolean faceBeautify
     );
 
     TravelAnimation getAnimation(Long id);

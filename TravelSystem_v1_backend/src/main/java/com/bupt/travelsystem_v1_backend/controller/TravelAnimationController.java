@@ -8,10 +8,16 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import java.util.List;
 import java.util.HashMap;
@@ -25,6 +31,9 @@ public class TravelAnimationController {
     private final TravelAnimationService animationService;
     private final VideoProcessingService videoProcessingService;
     private static final Logger log = LoggerFactory.getLogger(TravelAnimationController.class);
+    
+    @Value("${app.upload.dir}")
+    private String uploadDir;
 
     @PostMapping
     public ResponseEntity<?> createAnimation(
@@ -32,7 +41,14 @@ public class TravelAnimationController {
             @RequestParam("images") List<MultipartFile> images,
             @RequestParam("style") String style,
             @RequestParam("duration") Integer duration,
-            @RequestParam("musicType") String musicType) {
+            @RequestParam("musicType") String musicType,
+            @RequestParam(value = "transitionEffect", defaultValue = "FADE") String transitionEffect,
+            @RequestParam(value = "subtitleText", required = false) String subtitleText,
+            @RequestParam(value = "subtitleStyle", defaultValue = "ELEGANT") String subtitleStyle,
+            @RequestParam(value = "autoEnhance", defaultValue = "true") Boolean autoEnhance,
+            @RequestParam(value = "removeNoise", defaultValue = "false") Boolean removeNoise,
+            @RequestParam(value = "colorCorrection", defaultValue = "true") Boolean colorCorrection,
+            @RequestParam(value = "faceBeautify", defaultValue = "false") Boolean faceBeautify) {
         
         try {
             // 从SecurityContext获取当前用户
@@ -51,7 +67,14 @@ public class TravelAnimationController {
                 images,
                 TravelAnimation.AnimationStyle.valueOf(style),
                 duration,
-                TravelAnimation.MusicType.valueOf(musicType)
+                TravelAnimation.MusicType.valueOf(musicType),
+                TravelAnimation.TransitionEffect.valueOf(transitionEffect),
+                subtitleText,
+                TravelAnimation.SubtitleStyle.valueOf(subtitleStyle),
+                autoEnhance,
+                removeNoise,
+                colorCorrection,
+                faceBeautify
             );
 
             // 异步处理视频生成
@@ -121,6 +144,41 @@ public class TravelAnimationController {
                 org.springframework.data.domain.PageRequest.of(page, size)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("获取动画列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 下载视频文件
+     */
+    @GetMapping("/download")
+    public ResponseEntity<Resource> downloadVideo(@RequestParam String videoUrl) {
+        try {
+            // 使用配置文件中的路径
+            String filePath = uploadDir + "/" + videoUrl;
+            Path path = Paths.get(filePath);
+            Resource resource = new FileSystemResource(path);
+            
+            if (!resource.exists()) {
+                log.warn("视频文件不存在: {}", filePath);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // 生成下载文件名
+            String fileName = "旅行动画_" + System.currentTimeMillis() + ".mp4";
+            
+            log.info("开始下载视频: {} -> {}", filePath, fileName);
+            
+            // 设置下载头
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, 
+                        "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, "video/mp4")
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()))
+                .body(resource);
+                
+        } catch (Exception e) {
+            log.error("下载视频失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 } 

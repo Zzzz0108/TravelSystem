@@ -66,7 +66,30 @@ public class TravelAnimation {
     public enum MusicType {
         NONE,        // 无音乐
         PEACEFUL,    // 舒缓音乐
-        ENERGETIC    // 活力音乐
+        ENERGETIC,   // 活力音乐
+        ROMANTIC,    // 浪漫音乐
+        ADVENTURE,   // 冒险音乐
+        NATURE,      // 自然音乐
+        URBAN,       // 都市音乐
+        ETHNIC,      // 民族音乐
+        ELECTRONIC,  // 电子音乐
+        CLASSICAL,   // 古典音乐
+        JAZZ         // 爵士音乐
+    }
+
+    public enum TransitionEffect {
+        NONE,           // 无转场
+        FADE,           // 淡入淡出
+        SLIDE_LEFT,     // 左滑
+        SLIDE_RIGHT,    // 右滑
+        SLIDE_UP,       // 上滑
+        SLIDE_DOWN,     // 下滑
+        ZOOM_IN,        // 放大
+        ZOOM_OUT,       // 缩小
+        ROTATE,         // 旋转
+        WIPE,           // 擦除
+        DISSOLVE,       // 溶解
+        MORPH           // 变形
     }
 
     public enum AnimationStatus {
@@ -74,5 +97,35 @@ public class TravelAnimation {
         PROCESSING,  // 处理中
         COMPLETED,   // 已完成
         FAILED       // 处理失败
+    }
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private TransitionEffect transitionEffect = TransitionEffect.FADE;
+
+    @Column
+    private String subtitleText;
+
+    @Column
+    @Enumerated(EnumType.STRING)
+    private SubtitleStyle subtitleStyle = SubtitleStyle.ELEGANT;
+
+    @Column
+    private Boolean autoEnhance = true;
+
+    @Column
+    private Boolean removeNoise = false;
+
+    @Column
+    private Boolean colorCorrection = true;
+
+    @Column
+    private Boolean faceBeautify = false;
+
+    public enum SubtitleStyle {
+        ELEGANT,     // 优雅
+        BOLD,        // 粗体
+        HANDWRITING, // 手写
+        NEON         // 霓虹
     }
 } 

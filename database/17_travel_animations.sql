@@ -7,10 +7,17 @@ CREATE TABLE `travel_animations` (
   `music_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `video_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `transition_effect` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'FADE',
+  `subtitle_text` text COLLATE utf8mb4_unicode_ci,
+  `subtitle_style` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'ELEGANT',
+  `auto_enhance` tinyint(1) DEFAULT 1,
+  `remove_noise` tinyint(1) DEFAULT 0,
+  `color_correction` tinyint(1) DEFAULT 1,
+  `face_beautify` tinyint(1) DEFAULT 0,
   `created_at` datetime NOT NULL,
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_travel_animations_user_id` (`user_id`),
   KEY `idx_travel_animations_status` (`status`),
   CONSTRAINT `travel_animations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

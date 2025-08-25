@@ -1,0 +1,95 @@
+{
+  "music_library": {
+    "peaceful": {
+      "name": "舒缓音乐",
+      "description": "轻柔舒缓的背景音乐",
+      "file": "peaceful.mp3",
+      "duration": 120,
+      "mood": "calm",
+      "source": "Free Music Archive"
+    },
+    "energetic": {
+      "name": "活力音乐",
+      "description": "充满活力的动感音乐",
+      "file": "energetic.mp3",
+      "duration": 120,
+      "mood": "energetic",
+      "source": "ccMixter"
+    },
+    "romantic": {
+      "name": "浪漫音乐",
+      "description": "温馨浪漫的旋律",
+      "file": "romantic.mp3",
+      "duration": 120,
+      "mood": "romantic",
+      "source": "Incompetech"
+    },
+    "adventure": {
+      "name": "冒险音乐",
+      "description": "充满冒险精神的配乐",
+      "file": "adventure.mp3",
+      "duration": 120,
+      "mood": "adventure",
+      "source": "Kevin MacLeod"
+    },
+    "nature": {
+      "name": "自然音乐",
+      "description": "大自然的声音和旋律",
+      "file": "nature.mp3",
+      "duration": 120,
+      "mood": "natural",
+      "source": "Bensound"
+    },
+    "urban": {
+      "name": "都市音乐",
+      "description": "现代都市的节奏感",
+      "file": "urban.mp3",
+      "duration": 120,
+      "mood": "urban",
+      "source": "Free Music Archive"
+    },
+    "ethnic": {
+      "name": "民族音乐",
+      "description": "传统民族音乐元素",
+      "file": "ethnic.mp3",
+      "duration": 120,
+      "mood": "ethnic",
+      "source": "ccMixter"
+    },
+    "electronic": {
+      "name": "电子音乐",
+      "description": "现代电子音乐风格",
+      "file": "electronic.mp3",
+      "duration": 120,
+      "mood": "electronic",
+      "source": "Free Music Archive"
+    },
+    "classical": {
+      "name": "古典音乐",
+      "description": "经典古典音乐作品",
+      "file": "classical.mp3",
+      "duration": 120,
+      "mood": "classical",
+      "source": "Musopen"
+    },
+    "jazz": {
+      "name": "爵士音乐",
+      "description": "优雅的爵士乐旋律",
+      "file": "jazz.mp3",
+      "duration": 120,
+      "mood": "jazz",
+      "source": "Free Music Archive"
+    }
+  },
+  "download_instructions": {
+    "free_sources": [
+      "Free Music Archive (freemusicarchive.org)",
+      "ccMixter (ccmixter.org)",
+      "Incompetech (incompetech.com)",
+      "Bensound (bensound.com)",
+      "Musopen (musopen.org)"
+    ],
+    "license_info": "All music files should be royalty-free and properly licensed for commercial use",
+    "format": "MP3, 192kbps, 44.1kHz"
+  }
+} 

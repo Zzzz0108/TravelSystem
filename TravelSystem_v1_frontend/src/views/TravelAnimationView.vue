@@ -61,28 +61,29 @@
         </div>
       </div>
 
-      <!-- 右侧：生成选项和预览 -->
+      <!-- 右侧：选项设置区域 -->
       <div class="options-section">
         <div class="section-header">
-          <h2 class="section-title">生成选项</h2>
-          <p class="section-subtitle">自定义动画风格和参数</p>
+          <h2 class="section-title">动画设置</h2>
+          <p class="section-subtitle">自定义您的旅行动画效果</p>
         </div>
         
+        <!-- 基础设置 -->
         <div class="options-panel">
           <div class="option-group">
             <label class="option-label">动画风格</label>
             <div class="option-select-wrapper">
               <div class="option-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
               </div>
               <select v-model="animationStyle" class="option-select">
-              <option value="realistic">写实风格</option>
-              <option value="cartoon">卡通风格</option>
-              <option value="watercolor">水彩风格</option>
-            </select>
-          </div>
+                <option value="REALISTIC">写实风格</option>
+                <option value="CARTOON">卡通风格</option>
+                <option value="WATERCOLOR">水彩风格</option>
+              </select>
+            </div>
           </div>
           
           <div class="option-group">
@@ -95,11 +96,12 @@
                 </svg>
               </div>
               <select v-model="animationDuration" class="option-select">
-              <option value="30">30秒</option>
-              <option value="60">1分钟</option>
-              <option value="120">2分钟</option>
-            </select>
-          </div>
+                <option value="30">30秒</option>
+                <option value="60">60秒</option>
+                <option value="90">90秒</option>
+                <option value="120">120秒</option>
+              </select>
+            </div>
           </div>
           
           <div class="option-group">
@@ -113,11 +115,130 @@
                 </svg>
               </div>
               <select v-model="backgroundMusic" class="option-select">
-              <option value="none">无音乐</option>
-              <option value="peaceful">舒缓音乐</option>
-              <option value="energetic">活力音乐</option>
-            </select>
+                <option value="NONE">无音乐</option>
+                <option value="PEACEFUL">舒缓音乐</option>
+                <option value="ENERGETIC">活力音乐</option>
+                <option value="ROMANTIC">浪漫音乐</option>
+                <option value="ADVENTURE">冒险音乐</option>
+                <option value="NATURE">自然音乐</option>
+                <option value="URBAN">都市音乐</option>
+                <option value="ETHNIC">民族音乐</option>
+                <option value="ELECTRONIC">电子音乐</option>
+                <option value="CLASSICAL">古典音乐</option>
+                <option value="JAZZ">爵士音乐</option>
+              </select>
             </div>
+          </div>
+        </div>
+
+        <!-- 转场效果设置 -->
+        <div class="options-panel">
+          <h3 class="panel-title">转场效果</h3>
+          <div class="effects-grid">
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'FADE' }"
+                 @click="transitionEffect = 'FADE'">
+              <div class="effect-preview fade-preview"></div>
+              <span>淡入淡出</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'SLIDE_LEFT' }"
+                 @click="transitionEffect = 'SLIDE_LEFT'">
+              <div class="effect-preview slide-left-preview"></div>
+              <span>左滑</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'SLIDE_RIGHT' }"
+                 @click="transitionEffect = 'SLIDE_RIGHT'">
+              <div class="effect-preview slide-right-preview"></div>
+              <span>右滑</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'SLIDE_UP' }"
+                 @click="transitionEffect = 'SLIDE_UP'">
+              <div class="effect-preview slide-up-preview"></div>
+              <span>上滑</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'SLIDE_DOWN' }"
+                 @click="transitionEffect = 'SLIDE_DOWN'">
+              <div class="effect-preview slide-down-preview"></div>
+              <span>下滑</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'ZOOM_IN' }"
+                 @click="transitionEffect = 'ZOOM_IN'">
+              <div class="effect-preview zoom-in-preview"></div>
+              <span>放大</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'ZOOM_OUT' }"
+                 @click="transitionEffect = 'ZOOM_OUT'">
+              <div class="effect-preview zoom-out-preview"></div>
+              <span>缩小</span>
+            </div>
+            <div class="effect-item" 
+                 :class="{ active: transitionEffect === 'ROTATE' }"
+                 @click="transitionEffect = 'ROTATE'">
+              <div class="effect-preview rotate-preview"></div>
+              <span>旋转</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 字幕设置 -->
+        <div class="options-panel">
+          <h3 class="panel-title">字幕设置</h3>
+          <div class="subtitle-editor">
+            <input v-model="subtitleText" 
+                   placeholder="输入字幕内容（可选）" 
+                   class="subtitle-input">
+            <select v-model="subtitleStyle" class="subtitle-style-select">
+              <option value="ELEGANT">优雅</option>
+              <option value="BOLD">粗体</option>
+              <option value="HANDWRITING">手写</option>
+              <option value="NEON">霓虹</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 图片处理设置 -->
+        <div class="options-panel">
+          <h3 class="panel-title">图片处理</h3>
+          <div class="processing-options">
+            <label class="checkbox-item">
+              <input type="checkbox" v-model="autoEnhance">
+              <span class="checkmark"></span>
+              <span class="label-text">自动增强</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" v-model="removeNoise">
+              <span class="checkmark"></span>
+              <span class="label-text">降噪处理</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" v-model="colorCorrection">
+              <span class="checkmark"></span>
+              <span class="label-text">色彩校正</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" v-model="faceBeautify">
+              <span class="checkmark"></span>
+              <span class="label-text">人像美化</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 实时预览 -->
+        <div class="options-panel">
+          <h3 class="panel-title">实时预览</h3>
+          <div class="preview-controls">
+            <button @click="previewEffect('zoom')" class="preview-btn">预览缩放</button>
+            <button @click="previewEffect('slide')" class="preview-btn">预览滑动</button>
+            <button @click="previewEffect('fade')" class="preview-btn">预览淡入淡出</button>
+          </div>
+          <div class="preview-canvas">
+            <canvas ref="previewCanvas" width="300" height="200"></canvas>
           </div>
         </div>
 
@@ -139,14 +260,14 @@
           <div v-else class="video-container">
             <video :src="generatedAnimation" controls class="preview-video"></video>
             <div class="video-actions">
-              <a :href="generatedAnimation" target="_blank" class="download-btn">
+              <button @click="downloadVideo(generatedAnimation)" class="download-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                   <polyline points="7,10 12,15 17,10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
                 下载视频
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -192,12 +313,20 @@ const router = useRouter()
 // 状态变量
 const fileInput = ref(null)
 const uploadedImages = ref([])
-const animationStyle = ref('realistic')
+const animationStyle = ref('REALISTIC')
 const animationDuration = ref('60')
-const backgroundMusic = ref('none')
+const backgroundMusic = ref('NONE')
+const transitionEffect = ref('FADE')
+const subtitleText = ref('')
+const subtitleStyle = ref('ELEGANT')
+const autoEnhance = ref(true)
+const removeNoise = ref(false)
+const colorCorrection = ref(true)
+const faceBeautify = ref(false)
 const generatedAnimation = ref(null)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const previewCanvas = ref(null)
 
 // 计算属性
 const canGenerate = computed(() => uploadedImages.value.length > 0 && !isLoading.value)
@@ -256,9 +385,16 @@ const generateAnimation = async () => {
     
     const formData = new FormData();
     formData.append('title', '我的旅行动画');
-    formData.append('style', animationStyle.value.toUpperCase());
+    formData.append('style', animationStyle.value);
     formData.append('duration', animationDuration.value);
-    formData.append('musicType', backgroundMusic.value.toUpperCase());
+    formData.append('musicType', backgroundMusic.value);
+    formData.append('transitionEffect', transitionEffect.value);
+    formData.append('subtitleText', subtitleText.value);
+    formData.append('subtitleStyle', subtitleStyle.value);
+    formData.append('autoEnhance', autoEnhance.value);
+    formData.append('removeNoise', removeNoise.value);
+    formData.append('colorCorrection', colorCorrection.value);
+    formData.append('faceBeautify', faceBeautify.value);
     
     uploadedImages.value.forEach((image, index) => {
       formData.append('images', image.file);
@@ -338,9 +474,84 @@ const generateAnimation = async () => {
   }
 };
 
+const downloadVideo = async (videoUrl) => {
+  try {
+    // 从完整URL中提取相对路径
+    const baseUrl = 'http://localhost:9090/uploads/';
+    const relativePath = videoUrl.replace(baseUrl, '');
+    
+    // 调用后端下载接口
+    const response = await axios.get(`/api/animations/download?videoUrl=${relativePath}`, {
+      responseType: 'blob', // 重要：设置响应类型为blob
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    // 创建下载链接
+    const blob = new Blob([response.data], { type: 'video/mp4' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `旅行动画_${Date.now()}.mp4`; // 设置下载文件名
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    console.log('视频下载成功');
+  } catch (error) {
+    console.error('下载失败:', error);
+    errorMessage.value = '下载失败: ' + (error.response?.data || error.message);
+  }
+};
+
 const isLoggedIn = computed(() => {
   return localStorage.getItem('token') !== null;
 });
+
+// 预览效果方法
+const previewEffect = (effectType) => {
+  if (!previewCanvas.value) return;
+  
+  const canvas = previewCanvas.value;
+  const ctx = canvas.getContext('2d');
+  
+  // 清空画布
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 绘制示例内容
+  ctx.fillStyle = '#007AFF';
+  ctx.fillRect(50, 50, 100, 100);
+  
+  // 应用动画效果
+  switch (effectType) {
+    case 'zoom':
+      ctx.save();
+      ctx.translate(canvas.width/2, canvas.height/2);
+      ctx.scale(1.5, 1.5);
+      ctx.fillStyle = '#FF6B6B';
+      ctx.fillRect(-50, -50, 100, 100);
+      ctx.restore();
+      break;
+    case 'slide':
+      ctx.fillStyle = '#4ECDC4';
+      ctx.fillRect(150, 50, 100, 100);
+      break;
+    case 'fade':
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#45B7D1';
+      ctx.fillRect(50, 50, 100, 100);
+      ctx.globalAlpha = 1.0;
+      break;
+  }
+  
+  // 添加文字说明
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '16px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${effectType} 效果预览`, canvas.width/2, 180);
+};
 </script>
 
 <style lang="scss" scoped>
@@ -774,6 +985,191 @@ const isLoggedIn = computed(() => {
 
 .hidden {
   display: none;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.effects-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.effect-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(0, 122, 255, 0.1);
+    border-color: rgba(0, 122, 255, 0.3);
+    transform: translateY(-2px);
+  }
+  
+  &.active {
+    background: rgba(0, 122, 255, 0.2);
+    border-color: #007AFF;
+    box-shadow: 0 0 20px rgba(0, 122, 255, 0.3);
+  }
+  
+  .effect-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: linear-gradient(45deg, #007AFF, #00D4FF);
+  }
+  
+  span {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+  }
+}
+
+.subtitle-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  
+  .subtitle-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 14px;
+    
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    &:focus {
+      outline: none;
+      border-color: #007AFF;
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+    }
+  }
+  
+  .subtitle-style-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+    
+    &:focus {
+      outline: none;
+      border-color: #007AFF;
+    }
+    
+    option {
+      background: rgba(0, 0, 0, 0.9);
+      color: #ffffff;
+    }
+  }
+}
+
+.processing-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  
+  input[type="checkbox"] {
+    display: none;
+  }
+  
+  .checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  input[type="checkbox"]:checked + .checkmark {
+    background: #007AFF;
+    border-color: #007AFF;
+    
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  }
+  
+  .label-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+  }
+}
+
+.preview-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  
+  .preview-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(0, 122, 255, 0.6);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(0, 122, 255, 0.8);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+.preview-canvas {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  
+  canvas {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* 响应式设计 */
