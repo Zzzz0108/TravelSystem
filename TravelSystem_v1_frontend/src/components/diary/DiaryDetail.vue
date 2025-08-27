@@ -315,6 +315,15 @@ const handleLike = async () => {
         ElMessage.success('已取消点赞')
       }
       
+      // 触发日记点赞状态变化事件，通知收藏页面更新
+      window.dispatchEvent(new CustomEvent('diary-like-updated', {
+        detail: {
+          diaryId: diaryStore.currentDiary.id,
+          action: isLiked ? 'added' : 'removed',
+          isLiked: isLiked
+        }
+      }))
+      
       // 强制触发响应式更新，确保卡片能获取到最新状态
       console.log('强制触发响应式更新...')
       // 这里不需要做任何操作，因为 store 的更新应该自动触发响应式

@@ -26,43 +26,73 @@ export const useDiaryStore = defineStore('diary', () => {
     }
   }
 
-  // 获取日记列表（使用后端的热度+评分排序）
-  const fetchPopularDiaries = async (params) => {
+  // 获取日记列表（使用后端的热度+评分排序，支持分页）
+  const fetchPopularDiaries = async (params = {}) => {
     try {
       loading.value = true
       const response = await diaryApi.getPopularDiaries(params)
-      diaries.value = response.content
+      diaries.value = response.content || []
+      
+      // 返回完整响应，包含分页信息
+      return response
     } catch (err) {
       error.value = err.message
       ElMessage.error('获取日记列表失败')
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        pageSize: 20
+      }
     } finally {
       loading.value = false
     }
   }
 
-  // 获取按评分排序的日记
-  const fetchPopularDiariesByScore = async (params) => {
+  // 获取按评分排序的日记（支持分页）
+  const fetchPopularDiariesByScore = async (params = {}) => {
     try {
       loading.value = true
       const response = await diaryApi.getPopularDiaries(params)
-      diaries.value = response.content
+      diaries.value = response.content || []
+      
+      // 返回完整响应，包含分页信息
+      return response
     } catch (err) {
       error.value = err.message
       ElMessage.error('获取评分日记失败')
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        pageSize: 20
+      }
     } finally {
       loading.value = false
     }
   }
 
-  // 获取最新日记
-  const fetchLatestDiaries = async (params) => {
+  // 获取最新日记（支持分页）
+  const fetchLatestDiaries = async (params = {}) => {
     try {
       loading.value = true
       const response = await diaryApi.getLatestDiaries(params)
-      diaries.value = response.content
+      diaries.value = response.content || []
+      
+      // 返回完整响应，包含分页信息
+      return response
     } catch (err) {
       error.value = err.message
       ElMessage.error('获取最新日记失败')
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        pageSize: 20
+      }
     } finally {
       loading.value = false
     }
@@ -247,33 +277,34 @@ export const useDiaryStore = defineStore('diary', () => {
     }
   }
 
-  // 搜索日记
-  const searchDiaries = async (keyword, searchMode = 'destination') => {
+  // 搜索日记（支持分页）
+  const searchDiaries = async (keyword, searchMode = 'destination', params = {}) => {
     try {
       if (!keyword || !keyword.trim()) {
         // 如果没有搜索内容，获取所有日记
-        await fetchPopularDiaries();
-        return;
+        const response = await fetchPopularDiaries(params);
+        return response;
       }
 
       const trimmedKeyword = keyword.trim();
       console.log('Search Keyword:', trimmedKeyword);
       console.log('Search Mode:', searchMode);
+      console.log('分页参数:', params);
       
       let response;
       
       if (searchMode === 'destination') {
         // 使用目的地搜索接口
-        response = await diaryApi.searchByDestination(trimmedKeyword);
+        response = await diaryApi.searchDiariesByDestination(trimmedKeyword, params);
       } else if (searchMode === 'title') {
         // 使用标题搜索接口
-        response = await diaryApi.searchByExactTitle(trimmedKeyword);
+        response = await diaryApi.searchByExactTitle(trimmedKeyword, params);
       } else if (searchMode === 'content') {
         // 使用内容搜索接口
-        response = await diaryApi.searchByContent(trimmedKeyword);
+        response = await diaryApi.searchByContent(trimmedKeyword, params);
       } else {
         // 使用通用搜索接口
-        response = await diaryApi.searchDiaries(trimmedKeyword);
+        response = await diaryApi.searchDiaries(trimmedKeyword, params);
       }
       
       console.log('Search Response:', response);
@@ -285,9 +316,25 @@ export const useDiaryStore = defineStore('diary', () => {
         console.warn('No content in response');
         diaries.value = [];
       }
+      
+      // 返回完整响应，包含分页信息
+      return response || {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        pageSize: 20
+      }
     } catch (error) {
       console.error('搜索日记失败:', error);
       ElMessage.error('搜索失败，请稍后重试');
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        pageSize: 20
+      }
     }
   };
 
@@ -729,6 +776,28 @@ export const useDiaryStore = defineStore('diary', () => {
     }
   };
 
+  // 获取用户点赞的日记
+  const getLikedDiaries = async (params = {}) => {
+    try {
+      loading.value = true
+      const response = await diaryApi.getLikedDiaries(params)
+      console.log('获取用户点赞日记成功:', response)
+      return response
+    } catch (err) {
+      error.value = err.message
+      ElMessage.error('获取点赞日记失败')
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        pageSize: 20
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     diaries,
     currentDiary,
@@ -761,7 +830,8 @@ export const useDiaryStore = defineStore('diary', () => {
     fullTextSearch,
     compressDiaryContent,
     decompressDiaryContent,
-    incrementViews
+    incrementViews,
+    getLikedDiaries
   }
 })
 

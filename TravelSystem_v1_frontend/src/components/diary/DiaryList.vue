@@ -84,23 +84,96 @@
           <diary-card :diary="item" @update:diary="handleDiaryUpdate"/>
         </div>
       </div>
+      
+      <!-- 分页组件 - sticky在底部 -->
+      <div v-if="totalElements > 0" class="pagination-container">
+
+        <!-- 原生分页组件 -->
+        <div class="native-pagination">
+          <div class="pagination-info">
+            <span class="total-info">共 {{ totalElements }} 条记录</span>
+            <span class="page-info">第 {{ currentPage }} 页，共 {{ Math.ceil(totalElements / pageSize) }} 页</span>
+          </div>
+          
+          <div class="pagination-controls">
+            <button 
+              @click="handleCurrentChange(currentPage - 1)"
+              :disabled="currentPage <= 1"
+              class="pagination-btn prev-btn"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              上一页
+            </button>
+            
+            <div class="page-numbers">
+              <button 
+                v-for="page in getVisiblePages()" 
+                :key="page"
+                @click="handleCurrentChange(page)"
+                :class="['page-btn', { active: page === currentPage }]"
+                :disabled="page === '...'"
+              >
+                {{ page }}
+              </button>
+            </div>
+            
+            <button 
+              @click="handleCurrentChange(currentPage + 1)"
+              :disabled="currentPage >= Math.ceil(totalElements / pageSize)"
+              class="pagination-btn next-btn"
+            >
+              下一页
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="page-size-selector">
+            <span>每页显示：</span>
+            <select v-model="pageSize" @change="handleSizeChange(pageSize)" class="page-size-select">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <span>条</span>
+          </div>
+        </div>
+      </div>
     </div>
   </template>
   
   <script setup>
   import { ref, computed, onMounted, watch } from 'vue'
-  import { useRouter, useRoute } from 'vue-router'
-  import { useDiaryStore } from '@/stores/diaryStore'
-  import DiaryCard from '@/components/diary/DiaryCard.vue'
-  import FloatingActionButton from '@/components/common/buttons/FloatingActionButton.vue'
-  import { ElMessage } from 'element-plus'
-  import { debounce } from 'lodash-es'
+import { useRouter, useRoute } from 'vue-router'
+import { useDiaryStore } from '@/stores/diaryStore'
+import DiaryCard from '@/components/diary/DiaryCard.vue'
+import FloatingActionButton from '@/components/common/buttons/FloatingActionButton.vue'
+import { ElMessage } from 'element-plus'
+import { debounce } from 'lodash-es'
   
   const router = useRouter()
-  const route = useRoute()
-  const diaryStore = useDiaryStore()
-  const searchQuery = ref('')
-  const searchMode = ref('destination') // 默认搜索模式为目的地
+const route = useRoute()
+const diaryStore = useDiaryStore()
+const searchQuery = ref('')
+const searchMode = ref('destination') // 默认搜索模式为目的地
+
+// 分页相关状态
+const currentPage = ref(1)
+const pageSize = ref(20) // 默认20条/页
+const totalElements = ref(0)
+
+  // 初始化分页信息
+  const initializePagination = () => {
+    // 如果有现有数据，设置分页信息
+    if (diaryStore.diaries.length > 0) {
+      totalElements.value = diaryStore.diaries.length
+      console.log('初始化分页信息:', { total: totalElements.value, diaries: diaryStore.diaries.length })
+    }
+  }
   
   // 根据 destination 查询参数进行搜索
   const applyDestinationFromRoute = async () => {
@@ -108,7 +181,15 @@
     if (typeof dest === 'string' && dest.trim()) {
       searchMode.value = 'destination'
       searchQuery.value = dest.trim()
-      await diaryStore.searchDiaries(searchQuery.value, 'destination')
+      currentPage.value = 1 // 重置到第一页
+      const response = await diaryStore.searchDiaries(
+        searchQuery.value, 
+        'destination',
+        { page: 0, size: pageSize.value }
+      )
+      if (response) {
+        updatePaginationInfo(response.totalElements, 1)
+      }
     }
   }
   
@@ -120,7 +201,11 @@
         console.log('已有数据，跳过重新获取')
         return
       }
-      await diaryStore.fetchPopularDiaries() // 默认使用后端的热度+评分排序
+      const response = await diaryStore.fetchPopularDiaries({ 
+        page: currentPage.value - 1, 
+        size: pageSize.value 
+      })
+      updatePaginationInfo(response.totalElements, currentPage.value)
     } catch (error) {
       console.error('获取日记数据失败:', error)
     }
@@ -128,6 +213,9 @@
   
   // 组件挂载时：若路由带destination则按目的地搜索，否则加载默认数据
   onMounted(async () => {
+    // 初始化分页信息
+    initializePagination()
+    
     const hasDestination = typeof route.query.destination === 'string' && route.query.destination.trim()
     if (hasDestination) {
       await applyDestinationFromRoute()
@@ -149,7 +237,18 @@
   const debouncedSearch = debounce(async () => {
     // 双重校验，防止误触
     if (!hasValidKeyword() && !searchMode.value) return
-    await diaryStore.searchDiaries((searchQuery.value || '').trim(), searchMode.value)
+    
+    const response = await diaryStore.searchDiaries(
+      (searchQuery.value || '').trim(), 
+      searchMode.value,
+      { page: 0, size: pageSize.value } // 搜索时重置到第一页
+    )
+    
+    // 更新分页信息
+    if (response) {
+      updatePaginationInfo(response.totalElements, 1)
+      currentPage.value = 1
+    }
   }, 300)
   
   const handleSearch = () => {
@@ -176,6 +275,7 @@
   const clearSearch = () => {
     searchQuery.value = ''
     debouncedSearch.cancel()
+    currentPage.value = 1 // 重置到第一页
     initData(true) // 清除搜索时强制刷新数据
   }
   
@@ -200,6 +300,7 @@
   
   const searchByTag = (tag) => {
     searchQuery.value = tag;
+    currentPage.value = 1; // 重置到第一页
     handleSearch();
   }
   
@@ -210,6 +311,104 @@
     if (index !== -1) {
       diaryStore.diaries[index] = { ...diaryStore.diaries[index], ...updatedDiary }
     }
+  }
+  
+    // 分页处理函数
+  const handleSizeChange = async (newSize) => {
+    pageSize.value = newSize
+    currentPage.value = 1 // 重置到第一页
+    console.log('页面大小改变:', newSize)
+    
+    // 调用API获取新页面大小的数据
+    if (searchQuery.value.trim()) {
+      // 如果有搜索关键词，执行搜索
+      const response = await diaryStore.searchDiaries(
+        searchQuery.value.trim(), 
+        searchMode.value, 
+        { page: 0, size: newSize }
+      )
+      updatePaginationInfo(response.totalElements, 1)
+    } else {
+      // 否则获取热门日记
+      const response = await diaryStore.fetchPopularDiaries({ page: 0, size: newSize })
+      updatePaginationInfo(response.totalElements, 1)
+    }
+  }
+
+  const handleCurrentChange = async (newPage) => {
+    currentPage.value = newPage
+    console.log('当前页改变:', newPage)
+    
+    // 调用API获取指定页的数据
+    if (searchQuery.value.trim()) {
+      // 如果有搜索关键词，执行搜索
+      const response = await diaryStore.searchDiaries(
+        searchQuery.value.trim(), 
+        searchMode.value, 
+        { page: newPage - 1, size: pageSize.value } // 后端从0开始，前端从1开始
+      )
+      updatePaginationInfo(response.totalElements, newPage)
+    } else {
+      // 否则获取热门日记
+      const response = await diaryStore.fetchPopularDiaries({ 
+        page: newPage - 1, 
+        size: pageSize.value 
+      })
+      updatePaginationInfo(response.totalElements, newPage)
+    }
+  }
+
+  // 更新分页信息
+  const updatePaginationInfo = (total, current = 1) => {
+    if (total !== undefined && total !== null) {
+      totalElements.value = total
+    }
+    if (current !== undefined && current !== null) {
+      currentPage.value = current
+    }
+    console.log('分页信息更新:', { total, current, pageSize: pageSize.value })
+  }
+
+  // 获取可见的页码数组
+  const getVisiblePages = () => {
+    const totalPages = Math.ceil(totalElements.value / pageSize.value)
+    const current = currentPage.value
+    const pages = []
+    
+    if (totalPages <= 7) {
+      // 如果总页数小于等于7，显示所有页码
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // 如果总页数大于7，显示部分页码
+      if (current <= 4) {
+        // 当前页在前4页
+        for (let i = 1; i <= 5; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      } else if (current >= totalPages - 3) {
+        // 当前页在后3页
+        pages.push(1)
+        pages.push('...')
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        // 当前页在中间
+        pages.push(1)
+        pages.push('...')
+        for (let i = current - 1; i <= current + 1; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      }
+    }
+    
+    return pages
   }
   </script>
   
@@ -499,6 +698,163 @@
   
   .masonry-item {
     width: 100%;
+  }
+  
+  /* 分页组件样式 */
+  .pagination-container {
+    position: sticky;
+    bottom: 0px;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  /* 原生分页组件样式 */
+  .native-pagination {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+    
+    .pagination-info {
+      display: flex;
+      gap: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      
+      .total-info {
+        color: #007AFF;
+        font-weight: 600;
+      }
+      
+      .page-info {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+    
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      .pagination-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        svg {
+          width: 16px;
+          height: 16px;
+        }
+        
+        &:hover:not(:disabled) {
+          background: rgba(0, 122, 255, 0.2);
+          border-color: #007AFF;
+          color: #007AFF;
+          transform: translateY(-1px);
+        }
+        
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        
+        &.prev-btn {
+          padding-left: 12px;
+        }
+        
+        &.next-btn {
+          padding-right: 12px;
+        }
+      }
+      
+      .page-numbers {
+        display: flex;
+        gap: 4px;
+        
+        .page-btn {
+          min-width: 36px;
+          height: 36px;
+          padding: 0 8px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 6px;
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          &:hover:not(:disabled) {
+            background: rgba(0, 122, 255, 0.2);
+            border-color: #007AFF;
+            color: #007AFF;
+          }
+          
+          &.active {
+            background: #007AFF;
+            border-color: #007AFF;
+            color: #ffffff;
+            font-weight: 600;
+          }
+          
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+    
+    .page-size-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      
+      .page-size-select {
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          border-color: #007AFF;
+        }
+        
+        &:focus {
+          outline: none;
+          border-color: #007AFF;
+          box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+        }
+      }
+    }
   }
   
   /* 响应式适配 */

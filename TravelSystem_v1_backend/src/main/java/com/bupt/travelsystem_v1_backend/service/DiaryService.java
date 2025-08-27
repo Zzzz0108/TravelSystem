@@ -23,16 +23,16 @@ public interface DiaryService {
     Page<Diary> getUserDiaries(Long userId, Pageable pageable);
     
     // 获取热门日记
-    Page<Diary> getPopularDiaries(Pageable pageable);
+    Page<Diary> getPopularDiaries(Pageable pageable, Long userId);
     
     // 获取最新日记
-    Page<Diary> getLatestDiaries(Pageable pageable);
+    Page<Diary> getLatestDiaries(Pageable pageable, Long userId);
     
     // 搜索日记
-    Page<Diary> searchDiaries(String keyword, Pageable pageable);
+    Page<Diary> searchDiaries(String keyword, Pageable pageable, Long userId);
     
     // 精确搜索日记
-    Page<Diary> searchDiariesByExactTitle(String title, Pageable pageable);
+    Page<Diary> searchDiariesByExactTitle(String title, Pageable pageable, Long userId);
     
     // 点赞/取消点赞
     Diary toggleLike(Long diaryId, Long userId);
@@ -53,16 +53,16 @@ public interface DiaryService {
     Diary rateDiary(Long diaryId, Long userId, Integer rating);
     
     // 获取热门日记（基于热度和评分）
-    Page<Diary> getPopularDiariesByScore(Pageable pageable);
+    Page<Diary> getPopularDiariesByScore(Pageable pageable, Long userId);
     
     // 根据目的地搜索日记（支持destination、city、province三个字段）
-    Page<Diary> searchDiariesByDestination(String keyword, Pageable pageable);
+    Page<Diary> searchDiariesByDestination(String keyword, Pageable pageable, Long userId);
     
     // 精确查询日记名称
     Diary getDiaryByExactTitle(String title);
     
     // 全文检索日记内容
-    Page<Diary> fullTextSearch(String keyword, Pageable pageable);
+    Page<Diary> fullTextSearch(String keyword, Pageable pageable, Long userId);
     
     // 更新日记热度分数
     void updatePopularityScore(Long diaryId);
@@ -98,10 +98,13 @@ public interface DiaryService {
     Page<Diary> findByTitlePattern(String pattern, Pageable pageable);
     
     // 批量压缩日记
+    
+    // 获取用户点赞的日记列表
+    Page<Diary> getLikedDiariesByUser(Long userId, Pageable pageable);
     void batchCompressDiaries();
     
     // 获取推荐日记
-    Page<Diary> getRecommendedDiaries(Pageable pageable);
+    Page<Diary> getRecommendedDiaries(Pageable pageable, Long userId);
     
     Page<Diary> getAllDiaries(Pageable pageable);
 } 

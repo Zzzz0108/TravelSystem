@@ -160,6 +160,15 @@ const handleLike = async () => {
       } else {
         ElMessage.success('已取消点赞')
       }
+      
+      // 触发日记点赞状态变化事件，通知收藏页面更新
+      window.dispatchEvent(new CustomEvent('diary-like-updated', {
+        detail: {
+          diaryId: props.diary.id,
+          action: isLiked ? 'added' : 'removed',
+          isLiked: isLiked
+        }
+      }))
     }
   } catch (error) {
     console.error('点赞失败:', error)

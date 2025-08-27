@@ -40,20 +40,26 @@ api.interceptors.response.use(
 );
 
 // 获取日记列表
-export const getDiaries = async (params) => {
+export const getDiaries = async (params = {}) => {
   const response = await api.get('/diaries', { params });
   return response.data;
 };
 
-// 获取热门日记
-export const getPopularDiaries = async (params) => {
+// 获取热门日记（支持分页）
+export const getPopularDiaries = async (params = {}) => {
   const response = await api.get('/diaries/popular', { params });
   return response.data;
 };
 
-// 获取最新日记
-export const getLatestDiaries = async (params) => {
+// 获取最新日记（支持分页）
+export const getLatestDiaries = async (params = {}) => {
   const response = await api.get('/diaries/latest', { params });
+  return response.data;
+};
+
+// 获取推荐日记（支持分页）
+export const getRecommendedDiaries = async (params = {}) => {
+  const response = await api.get('/diaries/recommended', { params });
   return response.data;
 };
 
@@ -103,8 +109,8 @@ export const deleteDiary = async (id) => {
   await api.delete(`/diaries/${id}`);
 };
 
-// 搜索日记
-export const searchDiaries = async (keyword, params) => {
+// 搜索日记（支持分页）
+export const searchDiaries = async (keyword, params = {}) => {
   try {
     console.log('正在调用通用搜索接口:', '/diaries/search', '关键词:', keyword, '参数:', params);
     const response = await api.get('/diaries/search', {
@@ -114,6 +120,23 @@ export const searchDiaries = async (keyword, params) => {
     return response.data;
   } catch (error) {
     console.error('通用搜索失败:', error);
+    console.error('错误状态码:', error.response?.status);
+    console.error('错误响应:', error.response?.data);
+    throw error;
+  }
+};
+
+// 按目的地搜索日记（支持分页）
+export const searchDiariesByDestination = async (destination, params = {}) => {
+  try {
+    console.log('正在调用目的地搜索接口:', '/diaries/search/destination', '目的地:', destination, '参数:', params);
+    const response = await api.get('/diaries/search/destination', {
+      params: { destination, ...params }
+    });
+    console.log('目的地搜索响应:', response);
+    return response.data;
+  } catch (error) {
+    console.error('目的地搜索失败:', error);
     console.error('错误状态码:', error.response?.status);
     console.error('错误响应:', error.response?.data);
     throw error;
@@ -366,4 +389,15 @@ export const decompressDiaryContent = async (id) => {
 export const incrementViews = async (id) => {
   const response = await api.post(`/diaries/${id}/views`);
   return response.data;
+}; 
+
+// 获取用户点赞的日记
+export const getLikedDiaries = async (params = {}) => {
+  try {
+    const response = await api.get('/users/me/liked-diaries', { params });
+    return response.data;
+  } catch (error) {
+    console.error('获取用户点赞日记失败:', error);
+    throw error;
+  }
 }; 

@@ -35,13 +35,35 @@ public class DiaryController {
     }
 
     @GetMapping("/latest")
-    public ResponseEntity<Page<Diary>> getLatestDiaries(Pageable pageable) {
-        return ResponseEntity.ok(diaryService.getLatestDiaries(pageable));
+    public ResponseEntity<Page<Diary>> getLatestDiaries(Pageable pageable, Authentication authentication) {
+        try {
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
+            }
+            
+            Page<Diary> diaries = diaryService.getLatestDiaries(pageable, userId);
+            return ResponseEntity.ok(diaries);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @GetMapping("/popular")
-    public ResponseEntity<Page<Diary>> getPopularDiaries(Pageable pageable) {
-        return ResponseEntity.ok(diaryService.getPopularDiariesByScore(pageable));
+    public ResponseEntity<Page<Diary>> getPopularDiaries(Pageable pageable, Authentication authentication) {
+        try {
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
+            }
+            
+            Page<Diary> diaries = diaryService.getPopularDiariesByScore(pageable, userId);
+            return ResponseEntity.ok(diaries);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @GetMapping("/{id}")
@@ -204,14 +226,25 @@ public class DiaryController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String title,
             @RequestParam(required = false, defaultValue = "false") boolean exact,
-            Pageable pageable) {
-        if (title != null && !title.trim().isEmpty()) {
-            if (exact) {
-                return ResponseEntity.ok(diaryService.searchDiariesByExactTitle(title, pageable));
+            Pageable pageable,
+            Authentication authentication) {
+        try {
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
             }
-            return ResponseEntity.ok(diaryService.searchDiaries(title, pageable));
+            
+            if (title != null && !title.trim().isEmpty()) {
+                if (exact) {
+                    return ResponseEntity.ok(diaryService.searchDiariesByExactTitle(title, pageable, userId));
+                }
+                return ResponseEntity.ok(diaryService.searchDiaries(title, pageable, userId));
+            }
+            return ResponseEntity.ok(diaryService.searchDiaries(keyword, pageable, userId));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
         }
-        return ResponseEntity.ok(diaryService.searchDiaries(keyword, pageable));
     }
 
     @GetMapping("/tag/{tag}")
@@ -296,14 +329,25 @@ public class DiaryController {
     @GetMapping("/search/destination")
     public ResponseEntity<Page<Diary>> searchByDestination(
             @RequestParam(required = false) String destination,
-            Pageable pageable) {
-        System.out.println("=== 收到目的地搜索请求 ===");
-        System.out.println("搜索关键词: " + destination);
-        System.out.println("分页信息: " + pageable);
-        
-        Page<Diary> result = diaryService.searchDiariesByDestination(destination, pageable);
-        System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
-        return ResponseEntity.ok(result);
+            Pageable pageable,
+            Authentication authentication) {
+        try {
+            System.out.println("=== 收到目的地搜索请求 ===");
+            System.out.println("搜索关键词: " + destination);
+            System.out.println("分页信息: " + pageable);
+            
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
+            }
+            
+            Page<Diary> result = diaryService.searchDiariesByDestination(destination, pageable, userId);
+            System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @GetMapping("/search/exact")
@@ -319,14 +363,25 @@ public class DiaryController {
     @GetMapping("/search/fulltext")
     public ResponseEntity<Page<Diary>> fullTextSearch(
             @RequestParam String keyword,
-            Pageable pageable) {
-        System.out.println("=== 收到全文搜索请求 ===");
-        System.out.println("关键词: " + keyword);
-        System.out.println("分页信息: " + pageable);
-        
-        Page<Diary> result = diaryService.fullTextSearch(keyword, pageable);
-        System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
-        return ResponseEntity.ok(result);
+            Pageable pageable,
+            Authentication authentication) {
+        try {
+            System.out.println("=== 收到全文搜索请求 ===");
+            System.out.println("关键词: " + keyword);
+            System.out.println("分页信息: " + pageable);
+            
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
+            }
+            
+            Page<Diary> result = diaryService.fullTextSearch(keyword, pageable, userId);
+            System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @PostMapping("/{id}/compress")
@@ -356,21 +411,32 @@ public class DiaryController {
     @GetMapping("/search/content")
     public ResponseEntity<Page<Diary>> searchByContent(
             @RequestParam String content,
-            Pageable pageable) {
-        System.out.println("=== 收到内容搜索请求 ===");
-        System.out.println("内容关键词: " + content);
-        System.out.println("分页信息: " + pageable);
-        
-        Page<Diary> result = diaryService.fullTextSearch(content, pageable);
-        System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
-        return ResponseEntity.ok(result);
+            Pageable pageable,
+            Authentication authentication) {
+        try {
+            System.out.println("=== 收到内容搜索请求 ===");
+            System.out.println("内容关键词: " + content);
+            System.out.println("分页信息: " + pageable);
+            
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
+            }
+            
+            Page<Diary> result = diaryService.fullTextSearch(content, pageable, userId);
+            System.out.println("返回 " + result.getTotalElements() + " 条日记记录");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
     
     @GetMapping("/search/title")
     public ResponseEntity<Page<Diary>> searchByTitle(
             @RequestParam String title,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
         System.out.println("=== 收到标题搜索请求 ===");
         System.out.println("标题关键词: " + title);
         System.out.println("分页信息: page=" + page + ", size=" + size);
@@ -385,7 +451,7 @@ public class DiaryController {
     public ResponseEntity<Page<Diary>> searchByTitlePrefix(
             @RequestParam String prefix,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(diaryService.findByTitlePrefix(prefix, pageable));
     }
@@ -394,7 +460,7 @@ public class DiaryController {
     public ResponseEntity<Page<Diary>> searchByTitleSuffix(
             @RequestParam String suffix,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(diaryService.findByTitleSuffix(suffix, pageable));
     }
@@ -403,7 +469,7 @@ public class DiaryController {
     public ResponseEntity<Page<Diary>> searchByTitleContains(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(diaryService.findByTitleContains(keyword, pageable));
     }
@@ -412,7 +478,7 @@ public class DiaryController {
     public ResponseEntity<Page<Diary>> searchByTitlePattern(
             @RequestParam String pattern,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(diaryService.findByTitlePattern(pattern, pageable));
     }
@@ -430,7 +496,18 @@ public class DiaryController {
     }
 
     @GetMapping("/recommended")
-    public ResponseEntity<Page<Diary>> getRecommendedDiaries(Pageable pageable) {
-        return ResponseEntity.ok(diaryService.getRecommendedDiaries(pageable));
+    public ResponseEntity<Page<Diary>> getRecommendedDiaries(Pageable pageable, Authentication authentication) {
+        try {
+            Long userId = null;
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                userId = userService.getUserIdByUsername(username);
+            }
+            
+            Page<Diary> diaries = diaryService.getRecommendedDiaries(pageable, userId);
+            return ResponseEntity.ok(diaries);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 } 

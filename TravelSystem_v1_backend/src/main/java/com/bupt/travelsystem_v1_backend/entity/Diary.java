@@ -93,6 +93,9 @@ public class Diary {
 
     @Transient
     private Integer userRating;
+    
+    @Transient
+    private Boolean isLiked;
 
     @Column(name = "video_url")
     private String videoUrl;
@@ -115,6 +118,14 @@ public class Diary {
 
     public void setVideoUrl(String videoUrl) {
         this.videoUrl = videoUrl;
+    }
+    
+    public Boolean getIsLiked() {
+        return isLiked;
+    }
+    
+    public void setIsLiked(Boolean isLiked) {
+        this.isLiked = isLiked;
     }
 
     // 获取图片URL列表

@@ -341,29 +341,44 @@ public class DiaryServiceImpl implements DiaryService {
     }
 
     @Override
-    public Page<Diary> getPopularDiaries(Pageable pageable) {
+    public Page<Diary> getPopularDiaries(Pageable pageable, Long userId) {
         Page<Diary> diaries = diaryRepository.findAllByOrderByLikesDesc(pageable);
         diaries.getContent().forEach(diary -> {
             diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
         });
         return diaries;
     }
 
     @Override
-    public Page<Diary> getLatestDiaries(Pageable pageable) {
+    public Page<Diary> getLatestDiaries(Pageable pageable, Long userId) {
         Page<Diary> diaries = diaryRepository.findAllByOrderByCreatedAtDesc(pageable);
         diaries.getContent().forEach(diary -> {
             diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
         });
         return diaries;
     }
 
     @Override
-    public Page<Diary> searchDiaries(String keyword, Pageable pageable) {
+    public Page<Diary> searchDiaries(String keyword, Pageable pageable, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             Page<Diary> diaries = diaryRepository.findAll(pageable);
             diaries.getContent().forEach(diary -> {
                 diary.setCommentsCount(diary.getComments().size());
+                // 设置用户点赞状态
+                if (userId != null) {
+                    boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                    diary.setIsLiked(isLiked);
+                }
             });
             return diaries;
         }
@@ -371,6 +386,11 @@ public class DiaryServiceImpl implements DiaryService {
         Page<Diary> result = diaryRepository.findByTitleContaining(keyword, pageable);
         result.getContent().forEach(diary -> {
             diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
         });
         System.out.println("Found " + result.getTotalElements() + " results");
         return result;
@@ -663,12 +683,29 @@ public class DiaryServiceImpl implements DiaryService {
     }
 
     @Override
-    public Page<Diary> fullTextSearch(String keyword, Pageable pageable) {
+    public Page<Diary> fullTextSearch(String keyword, Pageable pageable, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
-            return diaryRepository.findAll(pageable);
+            Page<Diary> diaries = diaryRepository.findAll(pageable);
+            diaries.getContent().forEach(diary -> {
+                diary.setCommentsCount(diary.getComments().size());
+                // 设置用户点赞状态
+                if (userId != null) {
+                    boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                    diary.setIsLiked(isLiked);
+                }
+            });
+            return diaries;
         }
         System.out.println("Searching content for keyword: " + keyword);
         Page<Diary> result = diaryRepository.findByContentContaining(keyword, pageable);
+        result.getContent().forEach(diary -> {
+            diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
+        });
         System.out.println("Found " + result.getTotalElements() + " results");
         return result;
     }
@@ -683,56 +720,80 @@ public class DiaryServiceImpl implements DiaryService {
     }
 
     @Override
-    public Page<Diary> searchDiariesByDestination(String keyword, Pageable pageable) {
+    public Page<Diary> searchDiariesByDestination(String keyword, Pageable pageable, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             System.out.println("关键词为空，返回所有日记");
-            return diaryRepository.findAll(pageable);
+            Page<Diary> diaries = diaryRepository.findAll(pageable);
+            diaries.getContent().forEach(diary -> {
+                diary.setCommentsCount(diary.getComments().size());
+                // 设置用户点赞状态
+                if (userId != null) {
+                    boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                    diary.setIsLiked(isLiked);
+                }
+            });
+            return diaries;
         }
         
         System.out.println("=== 开始目的地搜索 ===");
         System.out.println("搜索关键词: " + keyword);
         System.out.println("分页信息: " + pageable);
         
-        // 先查询所有日记，看看字段值
-        List<Diary> allDiaries = diaryRepository.findAll();
-        System.out.println("数据库中总共有 " + allDiaries.size() + " 篇日记");
-        
-        for (Diary diary : allDiaries) {
-            System.out.println("日记ID: " + diary.getId() + 
-                ", 标题: " + diary.getTitle() + 
-                ", destination: " + diary.getDestination() + 
-                ", city: " + diary.getCity() + 
-                ", province: " + diary.getProvince());
-        }
-        
         // 执行搜索
         Page<Diary> result = diaryRepository.findByDestinationOrCityOrProvince(keyword, pageable);
         System.out.println("搜索结果数量: " + result.getTotalElements());
         
-        // 检查搜索结果
-        for (Diary diary : result.getContent()) {
-            System.out.println("匹配的日记: ID=" + diary.getId() + 
-                ", 标题=" + diary.getTitle() + 
-                ", destination=" + diary.getDestination() + 
-                ", city=" + diary.getCity() + 
-                ", province=" + diary.getProvince());
-        }
+        // 设置评论数和用户点赞状态
+        result.getContent().forEach(diary -> {
+            diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
+        });
         
         return result;
     }
 
     @Override
-    public Page<Diary> getPopularDiariesByScore(Pageable pageable) {
-        return diaryRepository.findAllByOrderByPopularityScoreDesc(pageable);
+    public Page<Diary> getPopularDiariesByScore(Pageable pageable, Long userId) {
+        Page<Diary> diaries = diaryRepository.findAllByOrderByPopularityScoreDesc(pageable);
+        diaries.getContent().forEach(diary -> {
+            diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
+        });
+        return diaries;
     }
 
     @Override
-    public Page<Diary> searchDiariesByExactTitle(String title, Pageable pageable) {
+    public Page<Diary> searchDiariesByExactTitle(String title, Pageable pageable, Long userId) {
         if (title == null || title.trim().isEmpty()) {
-            return diaryRepository.findAll(pageable);
+            Page<Diary> diaries = diaryRepository.findAll(pageable);
+            diaries.getContent().forEach(diary -> {
+                diary.setCommentsCount(diary.getComments().size());
+                // 设置用户点赞状态
+                if (userId != null) {
+                    boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                    diary.setIsLiked(isLiked);
+                }
+            });
+            return diaries;
         }
         System.out.println("Searching for exact title: " + title);
         Page<Diary> result = diaryRepository.findByTitle(title, pageable);
+        result.getContent().forEach(diary -> {
+            diary.setCommentsCount(diary.getComments().size());
+            // 设置用户点赞状态
+            if (userId != null) {
+                boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                diary.setIsLiked(isLiked);
+            }
+        });
         System.out.println("Found " + result.getTotalElements() + " results");
         return result;
     }
@@ -825,17 +886,16 @@ public class DiaryServiceImpl implements DiaryService {
     }
 
     @Override
-    public Page<Diary> getRecommendedDiaries(Pageable pageable) {
+    public Page<Diary> getRecommendedDiaries(Pageable pageable, Long userId) {
         try {
             System.out.println("=== DiaryServiceImpl.getRecommendedDiaries ===");
             System.out.println("获取推荐日记，分页信息: " + pageable);
+            System.out.println("用户ID: " + userId);
             
             // 获取当前用户
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             final User currentUser;
-            if (authentication != null && authentication.isAuthenticated()) {
-                String username = authentication.getName();
-                currentUser = userRepository.findByUsername(username).orElse(null);
+            if (userId != null) {
+                currentUser = userRepository.findById(userId).orElse(null);
             } else {
                 currentUser = null;
             }
@@ -932,6 +992,16 @@ public class DiaryServiceImpl implements DiaryService {
             
             System.out.println("推荐日记数量: " + recommendedDiaries.size());
             
+            // 设置评论数和用户点赞状态
+            recommendedDiaries.forEach(diary -> {
+                diary.setCommentsCount(diary.getComments().size());
+                // 设置用户点赞状态
+                if (userId != null) {
+                    boolean isLiked = diaryLikeRepository.existsByDiaryAndUser(diary, userRepository.findById(userId).orElse(null));
+                    diary.setIsLiked(isLiked);
+                }
+            });
+            
             // 创建分页结果
             int start = (int) pageable.getOffset();
             int end = Math.min((start + pageable.getPageSize()), recommendedDiaries.size());
@@ -968,5 +1038,31 @@ public class DiaryServiceImpl implements DiaryService {
         }
         
         return diaries;
+    }
+    
+    @Override
+    public Page<Diary> getLikedDiariesByUser(Long userId, Pageable pageable) {
+        try {
+            System.out.println("=== 获取用户点赞日记列表 ===");
+            System.out.println("用户ID: " + userId);
+            System.out.println("分页信息: " + pageable);
+            
+            // 使用Repository方法获取用户点赞的日记
+            Page<Diary> likedDiaries = diaryRepository.findLikedByUser(userId, pageable);
+            
+            System.out.println("找到 " + likedDiaries.getTotalElements() + " 篇点赞的日记");
+            
+            // 为每个日记设置当前用户的点赞状态（应该都是true）
+            for (Diary diary : likedDiaries.getContent()) {
+                diary.setUserRating(null); // 清空用户评分，因为这里不需要
+                // 可以在这里添加其他用户相关的状态
+            }
+            
+            return likedDiaries;
+        } catch (Exception e) {
+            System.out.println("获取用户点赞日记失败: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("获取用户点赞日记失败: " + e.getMessage());
+        }
     }
 } 
