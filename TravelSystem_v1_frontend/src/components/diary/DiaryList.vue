@@ -81,7 +81,7 @@
           :key="item.id" 
           class="masonry-item"
         >
-          <diary-card :diary="item"/>
+          <diary-card :diary="item" @update:diary="handleDiaryUpdate"/>
         </div>
       </div>
     </div>
@@ -113,8 +113,13 @@
   }
   
   // 初始化数据
-  const initData = async () => {
+  const initData = async (force = false) => {
     try {
+      // 如果已经有数据且不是强制刷新，则跳过
+      if (!force && diaryStore.diaries.length > 0) {
+        console.log('已有数据，跳过重新获取')
+        return
+      }
       await diaryStore.fetchPopularDiaries() // 默认使用后端的热度+评分排序
     } catch (error) {
       console.error('获取日记数据失败:', error)
@@ -127,7 +132,7 @@
     if (hasDestination) {
       await applyDestinationFromRoute()
     } else {
-      await initData()
+      await initData(false) // 不强制刷新，保持现有数据
     }
   })
   
@@ -146,13 +151,13 @@
     if (!hasValidKeyword() && !searchMode.value) return
     await diaryStore.searchDiaries((searchQuery.value || '').trim(), searchMode.value)
   }, 300)
-
+  
   const handleSearch = () => {
     const keyword = (searchQuery.value || '').trim()
     if (!keyword) {
       // 空关键字，回退到默认热门数据
       debouncedSearch.cancel()
-      initData()
+      initData(true) // 回退到默认数据时强制刷新
       return
     }
     if (!hasValidKeyword() && !searchMode.value) {
@@ -167,11 +172,11 @@
     if (event && event.isComposing) return
     handleSearch()
   }
-
+  
   const clearSearch = () => {
     searchQuery.value = ''
     debouncedSearch.cancel()
-    initData()
+    initData(true) // 清除搜索时强制刷新数据
   }
   
   // 数据过滤（直接展示 store 结果）
@@ -196,6 +201,15 @@
   const searchByTag = (tag) => {
     searchQuery.value = tag;
     handleSearch();
+  }
+  
+  // 处理日记更新（如点赞状态变化）
+  const handleDiaryUpdate = (updatedDiary) => {
+    // 更新 store 中的日记数据
+    const index = diaryStore.diaries.findIndex(d => d.id === updatedDiary.id)
+    if (index !== -1) {
+      diaryStore.diaries[index] = { ...diaryStore.diaries[index], ...updatedDiary }
+    }
   }
   </script>
   

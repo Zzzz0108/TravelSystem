@@ -123,6 +123,28 @@ export const useDiaryStore = defineStore('diary', () => {
       console.log('处理完成的日记:', processedDiary)
       currentDiary.value = processedDiary
       console.log('设置到store的日记:', currentDiary.value)
+      
+      // 同时更新 diaries 数组中的对应日记，确保数据同步
+      const index = diaries.value.findIndex(d => d.id === id)
+      if (index !== -1) {
+        // 保留原有的点赞状态和数量，只更新其他字段
+        const existingDiary = diaries.value[index]
+        diaries.value[index] = {
+          ...processedDiary,
+          likes: existingDiary.likes || processedDiary.likes || 0,
+          isLiked: existingDiary.isLiked || false
+        }
+        console.log('更新了 diaries 数组中的日记:', diaries.value[index])
+      } else {
+        // 如果 diaries 数组中没有找到，则添加进去
+        diaries.value.push({
+          ...processedDiary,
+          likes: processedDiary.likes || 0,
+          isLiked: false
+        })
+        console.log('在 diaries 数组中添加了新日记:', processedDiary)
+      }
+      
       return processedDiary
     } catch (err) {
       console.error('获取日记详情失败:', err)
@@ -149,10 +171,29 @@ export const useDiaryStore = defineStore('diary', () => {
   }
 
   // 创建日记
-  const createDiary = async (diary) => {
+  const createDiary = async (diaryData) => {
     try {
       loading.value = true
-      const newDiary = await diaryApi.createDiary(diary)
+      
+      // 如果传入的是FormData，直接使用；否则转换为FormData
+      let formData
+      if (diaryData instanceof FormData) {
+        formData = diaryData
+      } else {
+        // 兼容旧的调用方式
+        formData = new FormData()
+        Object.keys(diaryData).forEach(key => {
+          if (key === 'media' && Array.isArray(diaryData[key])) {
+            diaryData[key].forEach(file => {
+              formData.append('media', file)
+            })
+          } else {
+            formData.append(key, diaryData[key])
+          }
+        })
+      }
+      
+      const newDiary = await diaryApi.createDiary(formData)
       diaries.value.unshift(newDiary)
       ElMessage.success('创建日记成功')
       return newDiary

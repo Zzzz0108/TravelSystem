@@ -5,8 +5,10 @@ import com.bupt.travelsystem_v1_backend.entity.User;
 import com.bupt.travelsystem_v1_backend.entity.DiaryLike;
 import com.bupt.travelsystem_v1_backend.entity.DiaryRating;
 import com.bupt.travelsystem_v1_backend.entity.DiaryRatingId;
-import com.bupt.travelsystem_v1_backend.entity.DiaryImage;
-import com.bupt.travelsystem_v1_backend.entity.DiaryImageId;
+import com.bupt.travelsystem_v1_backend.entity.DiarySpot;
+import com.bupt.travelsystem_v1_backend.entity.Spot;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.bupt.travelsystem_v1_backend.repository.DiaryRepository;
 import com.bupt.travelsystem_v1_backend.repository.UserRepository;
 import com.bupt.travelsystem_v1_backend.repository.DiaryLikeRepository;
@@ -78,6 +80,9 @@ public class DiaryServiceImpl implements DiaryService {
     @Autowired
     private VideoCompressionService videoCompressionService;
     
+    @Autowired
+    private ObjectMapper objectMapper;
+    
     @Value("${file.upload-dir}")
     private String uploadDir;
 
@@ -95,7 +100,7 @@ public class DiaryServiceImpl implements DiaryService {
 
     @Override
     @Transactional
-    public Diary createDiary(String title, String content, String destination, Long spotId, Integer spotRating, MultipartFile[] media, Long userId) {
+    public Diary createDiary(String title, String content, String destination, String city, String province, Long spotId, Integer spotRating, MultipartFile[] media, Long userId) {
         try {
             System.out.println("=== DiaryServiceImpl.createDiary ===");
             System.out.println("用户ID: " + userId);
@@ -124,6 +129,8 @@ public class DiaryServiceImpl implements DiaryService {
             }
             
             diary.setDestination(destination);
+            diary.setCity(city);
+            diary.setProvince(province);
             
             User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在: " + userId));
@@ -136,16 +143,30 @@ public class DiaryServiceImpl implements DiaryService {
             // 更新缓存
             titleCache.put(diary.getTitle(), diary);
             
-            // 处理景点评分
-            if (spotId != null && spotRating != null && spotRating > 0) {
+            // 处理景点关联和评分
+            if (spotId != null) {
                 try {
-                    System.out.println("正在保存景点评分 - 景点ID: " + spotId + ", 评分: " + spotRating);
-                    spotService.rateSpot(spotId, spotRating);
-                    System.out.println("景点评分保存成功");
+                    System.out.println("正在处理景点关联 - 景点ID: " + spotId + ", 评分: " + spotRating);
+                    
+                    // 1. 获取景点信息
+                    Spot spot = spotService.getSpotById(spotId)
+                        .orElseThrow(() -> new RuntimeException("景点不存在: " + spotId));
+                    
+                    // 2. 创建日记-景点关联
+                    DiarySpot diarySpot = new DiarySpot(diary, spot);
+                    diary.getSpots().add(diarySpot);
+                    
+                    // 3. 保存景点评分（如果提供了评分）
+                    if (spotRating != null && spotRating > 0) {
+                        spotService.rateSpot(spotId, spotRating);
+                        System.out.println("景点评分保存成功");
+                    }
+                    
+                    System.out.println("景点关联成功: " + spot.getName());
                 } catch (Exception e) {
-                    System.out.println("景点评分保存失败: " + e.getMessage());
+                    System.out.println("景点关联失败: " + e.getMessage());
                     e.printStackTrace();
-                    // 评分失败不影响日记创建
+                    // 景点关联失败不影响日记创建
                 }
             }
             
@@ -158,10 +179,20 @@ public class DiaryServiceImpl implements DiaryService {
                         uploadDirFile.mkdirs();
                     }
                     
+                    // 初始化图片URL列表
+                    List<String> imageUrls = new ArrayList<>();
+                    
                     for (MultipartFile file : media) {
                         if (!file.isEmpty()) {
-                            // 生成文件名
-                            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+                            // 生成文件名 - 使用时间戳确保唯一性
+                            String timestamp = String.valueOf(System.currentTimeMillis());
+                            String originalName = file.getOriginalFilename();
+                            if (originalName == null || originalName.trim().isEmpty()) {
+                                originalName = "unknown";
+                            }
+                            String fileName = timestamp + "_" + originalName;
+                            System.out.println("生成的文件名: " + fileName);
+                            
                             // 保存文件
                             File dest = new File(uploadDirFile, fileName);
                             
@@ -185,14 +216,9 @@ public class DiaryServiceImpl implements DiaryService {
                                         file.transferTo(dest);
                                     }
                                     
-                                    // 创建图片记录
-                                    DiaryImage image = new DiaryImage();
-                                    DiaryImageId imageId = new DiaryImageId();
-                                    imageId.setDiaryId(diary.getId());
-                                    image.setId(imageId);
-                                    image.setImageUrl("/uploads/diaries/" + fileName);
-                                    image.setDiary(diary);
-                                    diary.getImages().add(image);
+                                    // 添加图片URL到列表
+                                    imageUrls.add("/uploads/diaries/" + fileName);
+                                    
                                 } finally {
                                     // 清理临时文件
                                     if (compressedFile != null && compressedFile.exists()) {
@@ -229,6 +255,17 @@ public class DiaryServiceImpl implements DiaryService {
                             }
                         }
                     }
+                    
+                    // 保存图片URL列表到日记
+                    if (!imageUrls.isEmpty()) {
+                        try {
+                            diary.setImages(objectMapper.writeValueAsString(imageUrls));
+                            System.out.println("图片URL列表保存成功: " + imageUrls);
+                        } catch (Exception e) {
+                            System.out.println("保存图片列表失败: " + e.getMessage());
+                        }
+                    }
+                    
                     // 保存更新后的日记（包含媒体文件）
                     diary = diaryRepository.save(diary);
                     System.out.println("媒体文件保存成功");
@@ -646,11 +683,42 @@ public class DiaryServiceImpl implements DiaryService {
     }
 
     @Override
-    public Page<Diary> searchDiariesByDestination(String destination, Pageable pageable) {
-        if (destination == null || destination.trim().isEmpty()) {
+    public Page<Diary> searchDiariesByDestination(String keyword, Pageable pageable) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            System.out.println("关键词为空，返回所有日记");
             return diaryRepository.findAll(pageable);
         }
-        return diaryRepository.findByDestination(destination, pageable);
+        
+        System.out.println("=== 开始目的地搜索 ===");
+        System.out.println("搜索关键词: " + keyword);
+        System.out.println("分页信息: " + pageable);
+        
+        // 先查询所有日记，看看字段值
+        List<Diary> allDiaries = diaryRepository.findAll();
+        System.out.println("数据库中总共有 " + allDiaries.size() + " 篇日记");
+        
+        for (Diary diary : allDiaries) {
+            System.out.println("日记ID: " + diary.getId() + 
+                ", 标题: " + diary.getTitle() + 
+                ", destination: " + diary.getDestination() + 
+                ", city: " + diary.getCity() + 
+                ", province: " + diary.getProvince());
+        }
+        
+        // 执行搜索
+        Page<Diary> result = diaryRepository.findByDestinationOrCityOrProvince(keyword, pageable);
+        System.out.println("搜索结果数量: " + result.getTotalElements());
+        
+        // 检查搜索结果
+        for (Diary diary : result.getContent()) {
+            System.out.println("匹配的日记: ID=" + diary.getId() + 
+                ", 标题=" + diary.getTitle() + 
+                ", destination=" + diary.getDestination() + 
+                ", city=" + diary.getCity() + 
+                ", province=" + diary.getProvince());
+        }
+        
+        return result;
     }
 
     @Override

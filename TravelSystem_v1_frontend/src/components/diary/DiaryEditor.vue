@@ -152,11 +152,20 @@
               </div>
               <h3>选择位置</h3>
             </div>
-            <location-picker v-model="form.location"/>
+            <location-picker @update:modelValue="handleLocationSelect"/>
+            
+            <!-- 调试信息：显示选择的位置详情 -->
+            <div v-if="form.destination" class="debug-info" style="margin-top: 12px; padding: 12px; background: rgba(0, 122, 255, 0.1); border-radius: 8px; font-size: 14px;">
+              <div><strong>已选择位置：</strong></div>
+              <div>景点：{{ form.destination }}</div>
+              <div>城市：{{ form.city }}</div>
+              <div>省份：{{ form.province }}</div>
+              <div>景点ID：{{ form.spotId || '未获取' }}</div>
+            </div>
           </div>
           
           <!-- 添加评分组件 -->
-          <div class="footer-section" v-if="form.location && form.location.id">
+          <div class="footer-section" v-if="form.destination && form.city && form.province">
             <div class="section-header">
               <div class="section-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -167,7 +176,7 @@
             </div>
             <star-rating
               v-model="form.rating"
-              :rating-count="form.location.ratingCount || 0"
+              :rating-count="0"
               :show-text="true"
             />
           </div>
@@ -185,19 +194,39 @@ import { ElMessage } from 'element-plus'
 import FileUploader from '@/components/common/forms/FileUploader.vue'
 import LocationPicker from '@/components/diary/components/LocationPicker.vue'
 import StarRating from '@/components/common/display/StarRating.vue'
-import axios from 'axios'
 
 const form = ref({
   title: '',
   content: '',
   media: [],
-  location: null,
+  destination: '',  // 具体景点名称，如：故宫、宽窄巷子
+  city: '',         // 城市名称，如：北京、成都
+  province: '',     // 省份名称，如：北京、四川
+  spotId: null,     // 景点ID
   rating: 0
 })
 
 const loading = ref(false)
 const router = useRouter()
 const diaryStore = useDiaryStore()
+
+const handleLocationSelect = (locationData) => {
+  if (locationData) {
+    form.value.destination = locationData.name
+    form.value.city = locationData.city
+    form.value.province = locationData.province
+    form.value.spotId = locationData.id  // 保存景点ID
+    
+    // 强制触发响应式更新
+    form.value = { ...form.value }
+  } else {
+    // 清空位置信息
+    form.value.destination = ''
+    form.value.city = ''
+    form.value.province = ''
+    form.value.spotId = null  // 清空景点ID
+  }
+}
 
 const handleFiles = (files) => {
   files.forEach(file => {
@@ -255,14 +284,21 @@ const handlePublish = async () => {
     formData.append('title', form.value.title)
     formData.append('content', form.value.content)
     
-    if (form.value.location && form.value.location.id) {
-      formData.append('destination', form.value.location.city)
-      formData.append('spotId', form.value.location.id)
+    if (form.value.destination && form.value.city && form.value.province) {
+      formData.append('destination', form.value.destination)
+      formData.append('city', form.value.city)
+      formData.append('province', form.value.province)
+      if (form.value.spotId) {
+        formData.append('spotId', form.value.spotId)
+        console.log('添加景点ID:', form.value.spotId)
+      }
       if (form.value.rating > 0) {
         formData.append('spotRating', form.value.rating)
       }
-      console.log('添加目的地:', form.value.location.city)
-      console.log('添加景点ID:', form.value.location.id)
+      console.log('添加目的地:', form.value.destination)
+      console.log('添加城市:', form.value.city)
+      console.log('添加省份:', form.value.province)
+      console.log('添加景点ID:', form.value.spotId)
       console.log('添加评分:', form.value.rating)
     }
     
@@ -277,20 +313,15 @@ const handlePublish = async () => {
       'Content-Type': 'multipart/form-data'
     })
     
-    const response = await axios.post('/api/diaries', formData, {
-      baseURL: 'http://localhost:9090',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    // 使用 store 方法创建日记，传入 FormData
+    const newDiary = await diaryStore.createDiary(formData)
     
-    const newDiary = response.data
-    console.log('服务器返回的日记数据:', newDiary)
-    
-    diaryStore.createDiary(newDiary)
-    ElMessage.success('发布成功')
-    router.push(`/diary/${newDiary.id}`)
+    if (newDiary) {
+      ElMessage.success('发布成功')
+      router.push(`/diary/${newDiary.id}`)
+    } else {
+      ElMessage.error('发布失败，请重试')
+    }
   } catch (error) {
     console.error('发布失败:', error)
     console.error('错误详情:', {

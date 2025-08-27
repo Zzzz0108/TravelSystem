@@ -465,6 +465,8 @@ export const useSpotStore = defineStore('spot', () => {
     fetchSpotRatings,
     fetchFavoriteSpots,
     toggleFavorite,
-    fetchFavoriteCount
+    fetchFavoriteCount,
+    rateSpot,
+    getSpotRatings
   }
 }) 

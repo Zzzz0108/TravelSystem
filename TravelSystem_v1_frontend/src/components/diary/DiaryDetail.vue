@@ -297,6 +297,16 @@ const handleLike = async () => {
       // 重新检查点赞状态以更新UI
       await diaryStore.checkLikeStatus(diaryStore.currentDiary.id)
       
+      // 调试信息：检查状态是否正确更新
+      console.log('详情页点赞后 - currentDiary.isLiked:', diaryStore.currentDiary.isLiked)
+      console.log('详情页点赞后 - currentDiary.likes:', diaryStore.currentDiary.likes)
+      
+      // 检查 diaries 数组中对应日记的状态
+      const diaryInList = diaryStore.diaries.find(d => d.id === diaryStore.currentDiary.id)
+      console.log('详情页点赞后 - diaries数组中对应日记:', diaryInList)
+      console.log('详情页点赞后 - diaries数组中对应日记.isLiked:', diaryInList?.isLiked)
+      console.log('详情页点赞后 - diaries数组中对应日记.likes:', diaryInList?.likes)
+      
       // 根据当前状态显示不同的消息
       const isLiked = diaryStore.currentDiary.isLiked
       if (isLiked) {
@@ -304,6 +314,10 @@ const handleLike = async () => {
       } else {
         ElMessage.success('已取消点赞')
       }
+      
+      // 强制触发响应式更新，确保卡片能获取到最新状态
+      console.log('强制触发响应式更新...')
+      // 这里不需要做任何操作，因为 store 的更新应该自动触发响应式
     }
   } catch (error) {
     console.error('点赞失败:', error)

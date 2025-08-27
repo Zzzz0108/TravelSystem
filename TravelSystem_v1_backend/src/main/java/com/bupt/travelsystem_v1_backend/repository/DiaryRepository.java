@@ -54,9 +54,10 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> {
     @EntityGraph(attributePaths = {"author", "comments"})
     Page<Diary> fullTextSearch(@Param("keyword") String keyword, Pageable pageable);
     
-    // 根据目的地搜索
-    @Query("SELECT d FROM Diary d WHERE d.destination = :destination")
-    Page<Diary> findByDestination(@Param("destination") String destination, Pageable pageable);
+    // 根据目的地搜索（支持destination、city、province三个字段）
+    @Query("SELECT d FROM Diary d WHERE d.destination LIKE %:keyword% OR d.city LIKE %:keyword% OR d.province LIKE %:keyword%")
+    @EntityGraph(attributePaths = {"author", "comments"})
+    Page<Diary> findByDestinationOrCityOrProvince(@Param("keyword") String keyword, Pageable pageable);
     
     // 获取所有带有目的地的日记
     @Query("SELECT d FROM Diary d WHERE d.destination IS NOT NULL")

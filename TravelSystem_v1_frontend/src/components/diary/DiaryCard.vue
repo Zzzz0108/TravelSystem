@@ -5,7 +5,7 @@
         <img 
           v-for="(img, index) in diary.images" 
           :key="index"
-          :src="img.imageUrl"
+          :src="getImageUrl(img.imageUrl)"
           class="card-image"
           loading="lazy"
           @click="handlePreview(index)"
@@ -44,7 +44,7 @@
         </div>
       </div>
       <div class="action-bar">
-        <like-button :count="diary.likes" @click="handleLike"/>
+        <like-button :count="getCurrentLikeCount" :is-liked="getCurrentLikeStatus" @click="handleLike"/>
         <comment-button :count="diary.comments?.length || 0" @click="openComment"/>
         <share-button @click="handleShare"/>
       </div>
@@ -56,16 +56,18 @@
 import { format } from 'date-fns'
 import UserAvatar from '@/components/common/display/UserAvatar.vue'
 import { useDiaryStore } from '@/stores/diaryStore'
+import { useUserStore } from '@/stores/userStore'
 import LikeButton from '@/components/common/buttons/LikeButton.vue'
 import CommentButton from '@/components/common/buttons/CommentButton.vue'
 import ShareButton from '@/components/common/buttons/ShareButton.vue'
 import { useRouter } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const defaultImage = '/images/diaries/default.jpg'
 const router = useRouter()
 const diaryStore = useDiaryStore()
+const userStore = useUserStore()
 
 const forbiddenSelectors = ['.action-bar', '.view-count', 'button', 'a','svg', 'path']
 // 添加卡片点击处理
@@ -107,26 +109,69 @@ const formatDate = (dateString) => {
   return format(new Date(dateString), 'yyyy-MM-dd HH:mm')
 }
 
+// 获取当前日记的最新点赞状态和数量
+const getCurrentLikeStatus = computed(() => {
+  // 优先从 store 中获取最新状态
+  const storeDiary = diaryStore.diaries.find(d => d.id === props.diary.id)
+  if (storeDiary) {
+    return storeDiary.isLiked || false
+  }
+  // 如果 store 中没有，则使用 props 中的状态
+  return props.diary.isLiked || false
+})
+
+const getCurrentLikeCount = computed(() => {
+  // 优先从 store 中获取最新数量
+  const storeDiary = diaryStore.diaries.find(d => d.id === props.diary.id)
+  if (storeDiary) {
+    return storeDiary.likes || 0
+  }
+  // 如果 store 中没有，则使用 props 中的数量
+  return props.diary.likes || 0
+})
+
 const emit = defineEmits(['update:diary'])
 
 const handleLike = async () => {
   try {
-    const updatedDiary = {
-      ...props.diary,
-      likes: props.diary.likes + (props.diary.isLiked ? -1 : 1),
-      isLiked: !props.diary.isLiked
+    if (!userStore.user) {
+      ElMessage.warning('请先登录后再点赞')
+      return
     }
-    emit('update:diary', updatedDiary)
-
-    // const response = await fetch(`/api/diaries/${props.diary.id}/like`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${localStorage.getItem('token')}`
-    //   }
-    // })
-    // if (!response.ok) throw new Error('点赞失败')
+    
+    // 使用 store 的点赞方法
+    const result = await diaryStore.toggleLike(props.diary.id)
+    if (result !== null) {
+      // 重新检查点赞状态以更新UI
+      await diaryStore.checkLikeStatus(props.diary.id)
+      
+      // 更新本地日记数据
+      const updatedDiary = {
+        ...props.diary,
+        likes: diaryStore.currentDiary?.likes || props.diary.likes,
+        isLiked: diaryStore.currentDiary?.isLiked || props.diary.isLiked
+      }
+      emit('update:diary', updatedDiary)
+      
+      // 根据当前状态显示不同的消息
+      const isLiked = updatedDiary.isLiked
+      if (isLiked) {
+        ElMessage.success('点赞成功！')
+      } else {
+        ElMessage.success('已取消点赞')
+      }
+    }
   } catch (error) {
     console.error('点赞失败:', error)
+    
+    // 根据错误类型显示不同的消息
+    if (error.message.includes('已经点赞过')) {
+      ElMessage.warning('您已经点赞过这个日记了')
+    } else if (error.message.includes('还没有点赞过')) {
+      ElMessage.warning('您还没有点赞过这个日记')
+    } else {
+      ElMessage.error('操作失败，请稍后重试')
+    }
   }
 }
 
@@ -143,6 +188,12 @@ const openComment = () => {
 
 const handlePreview = (index) => {
   // 处理图片预览逻辑
+}
+
+const getImageUrl = (url) => {
+  if (!url) return '/images/diaries/default.jpg'
+  if (url.startsWith('http')) return url
+  return `http://localhost:9090${url}`
 }
 
 const handleImageError = (e) => {

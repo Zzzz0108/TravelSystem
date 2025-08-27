@@ -4,9 +4,10 @@
       <div class="hero-section">
         <div class="hero-image-container">
           <img 
-            :src="spotDetail?.image || '/images/placeholder.jpg'" 
+            :src="getImageUrl(spotDetail?.image) || '/images/placeholder.jpg'" 
             :alt="spotDetail?.name"
             class="hero-image"
+            @error="handleImageError"
           >
           <div class="hero-overlay">
             <div class="hero-content">
@@ -153,8 +154,9 @@
                 >
                   <div class="diary-image">
                     <img 
-                      :src="diary.images?.[0] || '/images/diaries/default.jpg'" 
+                      :src="getImageUrl(diary.images?.[0]?.imageUrl || diary.images?.[0])" 
                       :alt="diary.title"
+                      @error="handleImageError"
                     >
                   </div>
                   <div class="diary-content">
@@ -212,11 +214,12 @@
   
   <script setup>
   import { ref, computed, onMounted, onUnmounted } from 'vue'
-  import { useRoute, useRouter } from 'vue-router'
-  import { useSpotStore } from '@/stores/spotStore'
-  import { useDiaryStore } from '@/stores/diaryStore'
-  import { useUserStore } from '@/stores/userStore'
-  import FavoriteButton from '@/components/common/buttons/FavoriteButton.vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useSpotStore } from '@/stores/spotStore'
+import { useDiaryStore } from '@/stores/diaryStore'
+import { useUserStore } from '@/stores/userStore'
+import FavoriteButton from '@/components/common/buttons/FavoriteButton.vue'
+import { ElMessage } from 'element-plus'
   
   const route = useRoute()
   const router = useRouter()
@@ -265,21 +268,28 @@
         }
         
         // 初始化用户评分状态
-        if (userStore.user && data.userRating !== null && data.userRating !== undefined) {
+        if (userStore.user && data.userRating !== null && data.userRating !== undefined && data.userRating > 0) {
           userRating.value = data.userRating
           hasRated.value = true
+          console.log('从景点详情获取到用户评分:', data.userRating)
         } else {
           userRating.value = 0
           hasRated.value = false
+          console.log('景点详情中没有用户评分，设置为默认值')
         }
       } else {
         spotDetail.value = null
       }
       // 获取相关日记
       await fetchRelatedDiaries()
-      // 获取用户评分（若后端在详情已返回 userRating，可省略；此处保留兼容）
-      if (userStore.user && spotDetail.value && spotDetail.value.userRating == null) {
-        await fetchUserRating()
+      // 获取用户评分（如果景点详情中没有用户评分，尝试获取）
+      if (userStore.user && spotDetail.value) {
+        if (spotDetail.value.userRating === null || spotDetail.value.userRating === undefined || spotDetail.value.userRating === 0) {
+          console.log('景点详情中没有用户评分，尝试获取用户评分')
+          await fetchUserRating()
+        } else {
+          console.log('景点详情中已有用户评分:', spotDetail.value.userRating)
+        }
       }
     } catch (error) {
     } finally {
@@ -290,14 +300,18 @@
   // 获取相关日记
   const fetchRelatedDiaries = async () => {
     try {
-      // 使用目的地城市进行搜索
-      if (spotDetail.value?.city) {
-        await diaryStore.searchDiaries(spotDetail.value.city, 'destination')
+      // 使用景点名称（destination）进行搜索，而不是城市
+      if (spotDetail.value?.name) {
+        console.log('搜索相关日记，景点名称:', spotDetail.value.name)
+        await diaryStore.searchDiaries(spotDetail.value.name, 'destination')
         relatedDiaries.value = Array.isArray(diaryStore.diaries) ? diaryStore.diaries : []
+        console.log('找到相关日记数量:', relatedDiaries.value.length)
       } else {
+        console.log('景点名称不存在，无法搜索相关日记')
         relatedDiaries.value = []
       }
     } catch (error) {
+      console.error('搜索相关日记失败:', error)
       relatedDiaries.value = []
     }
   }
@@ -305,44 +319,78 @@
   // 获取用户评分
   const fetchUserRating = async () => {
     try {
-      // TODO: 这里需要后端提供获取用户评分的API
-      // const rating = await spotStore.getUserRating(spotId.value)
-      // userRating.value = rating
-      // hasRated.value = rating > 0
-      
-      // 临时使用模拟数据
-      userRating.value = 0
-      hasRated.value = false
+      console.log('尝试获取用户评分，景点ID:', spotId.value)
+      // 从景点详情中获取用户评分
+      if (spotDetail.value?.userRating !== null && spotDetail.value?.userRating !== undefined && spotDetail.value?.userRating > 0) {
+        userRating.value = spotDetail.value.userRating
+        hasRated.value = true
+        console.log('从景点详情获取到用户评分:', spotDetail.value.userRating)
+      } else {
+        // 如果景点详情中没有用户评分，尝试从评分统计中推断
+        const ratings = await spotStore.fetchSpotRatings(spotId.value)
+        if (ratings && ratings.userRating !== null && ratings.userRating !== undefined && ratings.userRating > 0) {
+          userRating.value = ratings.userRating
+          hasRated.value = true
+          console.log('从评分统计获取到用户评分:', ratings.userRating)
+        } else {
+          userRating.value = 0
+          hasRated.value = false
+          console.log('未找到用户评分，设置为默认值')
+        }
+      }
     } catch (error) {
       console.error('获取用户评分失败:', error)
+      userRating.value = 0
+      hasRated.value = false
     }
   }
   
   // 处理评分
   const handleRating = async (rating) => {
     try {
-      // TODO: 这里需要后端提供评分API
-      // await spotStore.rateSpot(spotId.value, rating)
-      userRating.value = rating
-      hasRated.value = true
-      // 刷新景点详情
-      await fetchSpotDetail()
+      console.log('开始评分，景点ID:', spotId.value, '评分:', rating)
+      console.log('当前用户:', userStore.user?.username)
+      console.log('当前景点详情:', spotDetail.value)
+      
+      const result = await spotStore.rateSpot(spotId.value, rating)
+      console.log('评分接口返回结果:', result)
+      
+      if (result) {
+        userRating.value = rating
+        hasRated.value = true
+        ElMessage.success('评分成功！')
+        console.log('评分成功，更新本地状态')
+        
+        // 刷新景点详情
+        await fetchSpotDetail()
+      }
     } catch (error) {
       console.error('评分失败:', error)
+      console.error('错误详情:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      ElMessage.error(error.message || '评分失败，请稍后重试')
     }
   }
   
   // 删除评分
   const deleteRating = async () => {
     try {
-      // TODO: 这里需要后端提供删除评分API
-      // await spotStore.deleteRating(spotId.value)
-      userRating.value = 0
-      hasRated.value = false
-      // 刷新景点详情
-      await fetchSpotDetail()
+      console.log('开始删除评分，景点ID:', spotId.value)
+      // 通过设置评分为0来删除评分
+      const result = await spotStore.rateSpot(spotId.value, 0)
+      if (result) {
+        userRating.value = 0
+        hasRated.value = false
+        ElMessage.success('评分已删除')
+        // 刷新景点详情
+        await fetchSpotDetail()
+      }
     } catch (error) {
       console.error('删除评分失败:', error)
+      ElMessage.error(error.message || '删除评分失败，请稍后重试')
     }
   }
   
@@ -357,7 +405,7 @@
     router.push({
       path: '/diary',
       query: {
-        destination: spotDetail.value?.city
+        destination: spotDetail.value?.name  // 使用景点名称而不是城市
       }
     })
   }
@@ -372,7 +420,7 @@
     router.push({
       path: '/diary/create',
       query: {
-        destination: spotDetail.value?.city,
+        destination: spotDetail.value?.name,  // 使用景点名称而不是城市
         spotId: spotDetail.value?.id
       }
     })
@@ -400,6 +448,19 @@
     if (!dateString) return ''
     const date = new Date(dateString)
     return date.toLocaleDateString('zh-CN')
+  }
+  
+  // 图片URL处理函数（参考日记组件的逻辑）
+  const getImageUrl = (url) => {
+    if (!url) return '/images/diaries/default.jpg'
+    if (url.startsWith('http')) return url
+    return `http://localhost:9090${url}`
+  }
+  
+  // 图片加载失败处理
+  const handleImageError = (e) => {
+    console.log('图片加载失败:', e.target.src)
+    e.target.src = '/images/diaries/default.jpg'
   }
   
   // 生命周期

@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface DiaryService {
     // 创建日记
-    Diary createDiary(String title, String content, String destination, Long spotId, Integer spotRating, MultipartFile[] media, Long userId);
+    Diary createDiary(String title, String content, String destination, String city, String province, Long spotId, Integer spotRating, MultipartFile[] media, Long userId);
     
     // 更新日记
     Diary updateDiary(Long id, Diary diary, Long userId);
@@ -55,8 +55,8 @@ public interface DiaryService {
     // 获取热门日记（基于热度和评分）
     Page<Diary> getPopularDiariesByScore(Pageable pageable);
     
-    // 根据目的地搜索日记
-    Page<Diary> searchDiariesByDestination(String destination, Pageable pageable);
+    // 根据目的地搜索日记（支持destination、city、province三个字段）
+    Page<Diary> searchDiariesByDestination(String keyword, Pageable pageable);
     
     // 精确查询日记名称
     Diary getDiaryByExactTitle(String title);

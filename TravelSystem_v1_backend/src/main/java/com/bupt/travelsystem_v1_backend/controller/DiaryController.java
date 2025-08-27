@@ -1,8 +1,7 @@
 package com.bupt.travelsystem_v1_backend.controller;
 
 import com.bupt.travelsystem_v1_backend.entity.Diary;
-import com.bupt.travelsystem_v1_backend.entity.DiaryImage;
-import com.bupt.travelsystem_v1_backend.entity.DiaryImageId;
+
 import com.bupt.travelsystem_v1_backend.service.DiaryService;
 import com.bupt.travelsystem_v1_backend.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
@@ -63,6 +62,8 @@ public class DiaryController {
             @RequestParam("title") String title,
             @RequestParam("content") String content,
             @RequestParam(value = "destination", required = false) String destination,
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam(value = "province", required = false) String province,
             @RequestParam(value = "spotId", required = false) Long spotId,
             @RequestParam(value = "spotRating", required = false) Integer spotRating,
             @RequestParam(value = "media", required = false) MultipartFile[] media,
@@ -72,6 +73,8 @@ public class DiaryController {
             System.out.println("标题: " + title);
             System.out.println("内容: " + content);
             System.out.println("目的地: " + destination);
+            System.out.println("城市: " + city);
+            System.out.println("省份: " + province);
             System.out.println("景点ID: " + spotId);
             System.out.println("景点评分: " + spotRating);
             System.out.println("媒体文件数量: " + (media != null ? media.length : 0));
@@ -91,7 +94,7 @@ public class DiaryController {
             }
             System.out.println("用户ID: " + userId);
             
-            Diary diary = diaryService.createDiary(title, content, destination, spotId, spotRating, media, userId);
+            Diary diary = diaryService.createDiary(title, content, destination, city, province, spotId, spotRating, media, userId);
             System.out.println("日记创建成功，ID: " + diary.getId());
             
             return ResponseEntity.ok(diary);
@@ -295,7 +298,7 @@ public class DiaryController {
             @RequestParam(required = false) String destination,
             Pageable pageable) {
         System.out.println("=== 收到目的地搜索请求 ===");
-        System.out.println("目的地: " + destination);
+        System.out.println("搜索关键词: " + destination);
         System.out.println("分页信息: " + pageable);
         
         Page<Diary> result = diaryService.searchDiariesByDestination(destination, pageable);
