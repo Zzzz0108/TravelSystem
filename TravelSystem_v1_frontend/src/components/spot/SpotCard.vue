@@ -80,7 +80,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import FavoriteButton from '@/components/common/FavoriteButton.vue'
+import FavoriteButton from '@/components/common/buttons/FavoriteButton.vue'
 import { useSpotStore } from '@/stores/spotStore'
 
 const props = defineProps({

@@ -3,7 +3,7 @@
     <div class="nav-content">
       <!-- Logo区域 -->
       <div class="nav-logo">
-        <img src="../assets/favicon.svg" alt="Logo" class="logo-icon" />
+        <img src="@/assets/favicon.svg" alt="Logo" class="logo-icon" />
         
         <!-- 应用名称 -->
         <span class="logo-text">Travel</span>
@@ -105,15 +105,22 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
-import UserAvatar from '@/components/common/UserAvatar.vue'
-import lottie from 'lottie-web'
+import UserAvatar from '@/components/common/display/UserAvatar.vue'
+import { useLottieManager } from './composables/useLottieManager'
 
 const userStore = useUserStore()
 const router = useRouter()
 
-// Lottie动画实例存储
-const lottieInstances = ref({})
-const lottieRefs = ref({})
+// 使用Lottie动画管理composable
+const {
+  lottieInstances,
+  lottieRefs,
+  setLottieRef,
+  playLottie,
+  stopLottie,
+  initAllLottie,
+  cleanupLottie
+} = useLottieManager()
 
 // 用户菜单状态
 const showUserMenu = ref(false)
@@ -187,28 +194,7 @@ const provinces = [
   { name: '澳门', path: '/', value: '澳门' }
 ]
 
-// 设置Lottie引用
-const setLottieRef = (el, id) => {
-  if (el) {
-    lottieRefs.value[id] = el
-  }
-}
 
-// 播放Lottie动画
-const playLottie = (id) => {
-  if (lottieInstances.value[id]) {
-    // 从头开始播放动画
-    lottieInstances.value[id].goToAndPlay(0)
-  }
-}
-
-// 停止Lottie动画
-const stopLottie = (id) => {
-  if (lottieInstances.value[id]) {
-    // 停止动画并跳转到最后一帧
-    lottieInstances.value[id].goToAndStop(lottieInstances.value[id].totalFrames - 1, true)
-  }
-}
 
 // 切换用户菜单
 const toggleUserMenu = () => {
@@ -253,98 +239,9 @@ const closeMenus = (event) => {
   }
 }
 
-// 初始化Lottie动画
-const initLottie = async () => {
-  console.log('开始初始化Lottie动画...')
-  
-  // 初始化所有导航链接的Lottie动画
-  for (const link of links) {
-    if (lottieRefs.value[link.id]) {
-      console.log(`初始化${link.name}动画...`)
-      try {
-        lottieInstances.value[link.id] = lottie.loadAnimation({
-          container: lottieRefs.value[link.id],
-          renderer: 'svg',
-          loop: false,
-          autoplay: false,
-          path: link.lottiePath
-        })
-        
-        // 设置动画加载完成后停在最后一帧
-        lottieInstances.value[link.id].addEventListener('DOMLoaded', () => {
-          lottieInstances.value[link.id].goToAndStop(lottieInstances.value[link.id].totalFrames - 1, true)
-        })
-        
-        console.log(`${link.name}动画加载成功`)
-      } catch (error) {
-        console.error(`${link.name}动画加载失败:`, error)
-        // 如果Lottie加载失败，使用SVG图标作为备选
-        lottieRefs.value[link.id].innerHTML = createPlaceholderIcon(link.id)
-      }
-    }
-  }
-  
-  // 初始化定位图标的Lottie动画
-  if (lottieRefs.value.location) {
-    try {
-      lottieInstances.value.location = lottie.loadAnimation({
-        container: lottieRefs.value.location,
-        renderer: 'svg',
-        loop: false,
-        autoplay: false,
-        path: '/src/assets/定位.json'
-      })
-      
-      // 设置动画加载完成后停在最后一帧
-      lottieInstances.value.location.addEventListener('DOMLoaded', () => {
-        lottieInstances.value.location.goToAndStop(lottieInstances.value.location.totalFrames - 1, true)
-      })
-      
-      console.log('定位动画加载成功')
-    } catch (error) {
-      console.error('定位动画加载失败:', error)
-      lottieRefs.value.location.innerHTML = createPlaceholderIcon('location')
-    }
-  }
-  
-  // 初始化其他功能的Lottie动画
-  const otherAnimations = [
-    { id: 'login', path: '/src/assets/登录注册.json' }
-  ]
-  
-  otherAnimations.forEach(({ id, path }) => {
-    if (lottieRefs.value[id]) {
-      try {
-        lottieInstances.value[id] = lottie.loadAnimation({
-          container: lottieRefs.value[id],
-          renderer: 'svg',
-          loop: false,
-          autoplay: false,
-          path: path
-        })
-        
-        // 设置动画加载完成后停在最后一帧
-        lottieInstances.value[id].addEventListener('DOMLoaded', () => {
-          lottieInstances.value[id].goToAndStop(lottieInstances.value[id].totalFrames - 1, true)
-        })
-        
-        console.log(`${id}动画加载成功`)
-      } catch (error) {
-        console.error(`${id}动画加载失败:`, error)
-        lottieRefs.value[id].innerHTML = createPlaceholderIcon(id)
-      }
-    }
-  })
-}
 
-// 创建占位符图标
-const createPlaceholderIcon = (id) => {
-  const icons = {
-    location: '<svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 4C16.27 4 10 10.27 10 18c0 11 14 26 14 26s14-15 14-26c0-7.73-6.27-14-14-14zm0 22c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>'
-  }
-  
-  return icons[id] || '<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="24" r="12"/></svg>'
-}
+
+
 
 // 头像 URL
 const avatarUrl = computed(() => {
@@ -360,10 +257,12 @@ const logout = () => {
 // 生命周期
 onMounted(() => {
   console.log('NavBar组件已挂载')
-  // 等待DOM更新后初始化Lottie
-  setTimeout(() => {
-    initLottie()
-  }, 200)
+  
+  // 初始化所有Lottie动画
+  const otherAnimations = [
+    { id: 'login', path: '/src/assets/登录注册.json' }
+  ]
+  initAllLottie(links, otherAnimations)
   
   // 添加点击外部关闭菜单的事件监听
   document.addEventListener('click', closeMenus)
@@ -371,11 +270,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   // 清理Lottie实例
-  Object.values(lottieInstances.value).forEach(instance => {
-    if (instance && instance.destroy) {
-      instance.destroy()
-    }
-  })
+  cleanupLottie()
   
   // 移除事件监听
   document.removeEventListener('click', closeMenus)

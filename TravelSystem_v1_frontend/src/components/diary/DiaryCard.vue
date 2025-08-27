@@ -54,11 +54,11 @@
 
 <script setup>
 import { format } from 'date-fns'
-import UserAvatar from '@/components/common/UserAvatar.vue'
+import UserAvatar from '@/components/common/display/UserAvatar.vue'
 import { useDiaryStore } from '@/stores/diaryStore'
-import LikeButton from '@/components/common/LikeButton.vue'
-import CommentButton from '@/components/common/CommentButton.vue'
-import ShareButton from '@/components/common/ShareButton.vue'
+import LikeButton from '@/components/common/buttons/LikeButton.vue'
+import CommentButton from '@/components/common/buttons/CommentButton.vue'
+import ShareButton from '@/components/common/buttons/ShareButton.vue'
 import { useRouter } from 'vue-router'
 import { onMounted } from 'vue'
 import { ElMessage } from 'element-plus'

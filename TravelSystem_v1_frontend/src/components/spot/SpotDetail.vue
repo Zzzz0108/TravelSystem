@@ -216,7 +216,7 @@
   import { useSpotStore } from '@/stores/spotStore'
   import { useDiaryStore } from '@/stores/diaryStore'
   import { useUserStore } from '@/stores/userStore'
-  import FavoriteButton from '@/components/common/FavoriteButton.vue'
+  import FavoriteButton from '@/components/common/buttons/FavoriteButton.vue'
   
   const route = useRoute()
   const router = useRouter()

@@ -11,7 +11,7 @@
 
           <!-- 邮箱输入 -->
           <div class="input-box" :class="{ 'input-error': errors.email }">
-            <span class="icon"><img src="../assets/icon/phone.svg" alt="email icon" /></span>
+            <span class="icon"><img src="@/assets/icon/phone.svg" alt="email icon" /></span>
             <input 
               type="email" 
               placeholder="Email address" 
@@ -23,7 +23,7 @@
 
           <!-- 用户名输入 -->
           <div class="input-box" :class="{ 'input-error': errors.username }">
-            <span class="icon"><img src="../assets/icon/phone.svg" alt="username icon" /></span>
+            <span class="icon"><img src="@/assets/icon/phone.svg" alt="username icon" /></span>
             <input 
               type="text" 
               placeholder="Username" 
@@ -33,9 +33,9 @@
           </div>
           <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
 
-          <!-- 密码输入 -->
-          <div class="input-box" :class="{ 'input-error': errors.password }">
-            <span class="icon"><img src="../assets/icon/lock.svg" alt="lock icon" /></span>
+                      <!-- 密码输入 -->
+            <div class="input-box" :class="{ 'input-error': errors.password }">
+              <span class="icon"><img src="@/assets/icon/lock.svg" alt="lock icon" /></span>
             <input 
               :type="showPassword ? 'text' : 'password'" 
               placeholder="Password" 
@@ -48,9 +48,9 @@
           </div>
           <span class="error-message" v-if="errors.password">{{ errors.password }}</span>
 
-          <!-- 确认密码输入 -->
-          <div class="input-box" :class="{ 'input-error': errors.confirmPassword }">
-            <span class="icon"><img src="../assets/icon/lock.svg" alt="lock icon" /></span>
+                      <!-- 确认密码输入 -->
+            <div class="input-box" :class="{ 'input-error': errors.confirmPassword }">
+              <span class="icon"><img src="@/assets/icon/lock.svg" alt="lock icon" /></span>
             <input 
               :type="showConfirmPassword ? 'text' : 'password'" 
               placeholder="Confirm Password" 
@@ -66,7 +66,7 @@
           <!-- 验证码 + 发送按钮 -->
           <div class="input-group">
             <div class="input-box" style="flex: 1" :class="{ 'input-error': errors.code }">
-              <span class="icon"><img src="../assets/icon/send.svg" alt="send icon" /></span>
+              <span class="icon"><img src="@/assets/icon/send.svg" alt="send icon" /></span>
               <input 
                 placeholder="Verification Code" 
                 v-model="code" 
@@ -129,9 +129,9 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/userStore'
-import eye from '../assets/icon/eye.svg'
-import eyeclose from '../assets/icon/eyeclose.svg'
+import { useUserStore } from '../../stores/userStore'
+import eye from '@/assets/icon/eye.svg'
+import eyeclose from '@/assets/icon/eyeclose.svg'
 
 const router = useRouter()
 

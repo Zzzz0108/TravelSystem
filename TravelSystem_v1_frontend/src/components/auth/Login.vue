@@ -25,7 +25,7 @@
 
           <!-- 手机号 / 邮箱 -->
           <div class="input-box" :class="{ 'input-error': errors.identifier }">
-            <span class="icon"><img src="../assets/icon/phone.svg" alt="phone icon" /></span>
+            <span class="icon"><img src="@/assets/icon/phone.svg" alt="phone icon" /></span>
             <input 
               :placeholder="mode === 'password' ? 'Email address' : 'Email address'" 
               v-model="identifier" 
@@ -37,7 +37,7 @@
           <!-- 密码登录模式 -->
           <template v-if="mode === 'password'">
             <div class="input-box" :class="{ 'input-error': errors.password }">
-              <span class="icon"><img src="../assets/icon/lock.svg" alt="lock icon" /></span>
+              <span class="icon"><img src="@/assets/icon/lock.svg" alt="lock icon" /></span>
               <input 
                 :type="showPassword ? 'text' : 'password'" 
                 placeholder="Password" 
@@ -55,7 +55,7 @@
           <template v-else>
             <div class="input-group">
               <div class="input-box" style="flex: 1" :class="{ 'input-error': errors.code }">
-                <span class="icon"><img src="../assets/icon/send.svg" alt="send icon" /></span>
+                <span class="icon"><img src="@/assets/icon/send.svg" alt="send icon" /></span>
                 <input 
                   placeholder="Verification Code" 
                   v-model="code" 
@@ -118,9 +118,9 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/userStore'
-import eye from '../assets/icon/eye.svg'
-import eyeclose from '../assets/icon/eyeclose.svg'
+import { useUserStore } from '../../stores/userStore'
+import eye from '@/assets/icon/eye.svg'
+import eyeclose from '@/assets/icon/eyeclose.svg'
 
 const router = useRouter()
 const userStore = useUserStore()

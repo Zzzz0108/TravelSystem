@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import Navigation from '@/components/Navigation.vue'
+import Navigation from '@/components/navigation/Navigation.vue'
 </script>
 
 <style scoped>
@@ -15,6 +15,5 @@ import Navigation from '@/components/Navigation.vue'
   min-height: 100vh;
   padding: 0;
   margin: 0;
-  overflow: hidden;
 }
 </style>

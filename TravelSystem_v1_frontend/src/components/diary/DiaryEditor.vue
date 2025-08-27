@@ -182,9 +182,9 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDiaryStore } from '@/stores/diaryStore'
 import { ElMessage } from 'element-plus'
-import FileUploader from '@/components/common/FileUploader.vue'
-import LocationPicker from '@/components/common/LocationPicker.vue'
-import StarRating from '@/components/common/StarRating.vue'
+import FileUploader from '@/components/common/forms/FileUploader.vue'
+import LocationPicker from '@/components/diary/components/LocationPicker.vue'
+import StarRating from '@/components/common/display/StarRating.vue'
 import axios from 'axios'
 
 const form = ref({

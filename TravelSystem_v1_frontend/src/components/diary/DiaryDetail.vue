@@ -203,10 +203,10 @@ import { format } from 'date-fns'
 import { useDiaryStore } from '@/stores/diaryStore'
 import { useUserStore } from '@/stores/userStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import UserAvatar from '@/components/common/UserAvatar.vue'
-import LikeButton from '@/components/common/LikeButton.vue'
-import CommentButton from '@/components/common/CommentButton.vue'
-import ShareButton from '@/components/common/ShareButton.vue'
+import UserAvatar from '@/components/common/display/UserAvatar.vue'
+import LikeButton from '@/components/common/buttons/LikeButton.vue'
+import CommentButton from '@/components/common/buttons/CommentButton.vue'
+import ShareButton from '@/components/common/buttons/ShareButton.vue'
 
 const route = useRoute()
 const router = useRouter()
