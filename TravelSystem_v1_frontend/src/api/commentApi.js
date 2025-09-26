@@ -1,41 +1,4 @@
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: 'http://localhost:9090/api',
-  timeout: 10000
-});
-
-// 添加请求拦截器
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// 添加响应拦截器
-api.interceptors.response.use(
-  response => response,
-  error => {
-    console.error('评论API请求失败:', error);
-    console.error('错误状态码:', error.response?.status);
-    console.error('错误响应:', error.response?.data);
-    
-    if (error.response?.status === 401) {
-      // token 过期或无效，清除用户信息
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    } else if (error.response?.status === 403) {
-      console.error('权限不足，无法执行此操作');
-    } else if (error.response?.status === 404) {
-      console.error('资源不存在');
-    } else if (error.response?.status === 500) {
-      console.error('服务器内部错误');
-    }
-    return Promise.reject(error);
-  }
-);
+import api from '@/utils/axios'
 
 // 获取日记的评论
 export const getCommentsByDiaryId = async (diaryId, params) => {

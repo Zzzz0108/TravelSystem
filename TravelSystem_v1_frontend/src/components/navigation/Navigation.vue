@@ -168,9 +168,9 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 // 高德地图 Key 配置
-const AMAP_JS_KEY = '0d2dd776876f7864f7a92e79efd1a8b8'  // Web端 Key - 地图显示
-const AMAP_REST_KEY = 'af8c374c9ff24f82225595bf3fecd161'  // Web服务端 Key - 地理编码服务
-const AMAP_SECRET_KEY = '01ddbb74c50cc41ccef104b3b3520307'  // 安全密钥 - 签名验证
+const AMAP_JS_KEY = import.meta.env.VITE_AMAP_JS_KEY  // Web端 Key - 地图显示
+const AMAP_REST_KEY = import.meta.env.VITE_AMAP_REST_KEY  // Web服务端 Key - 地理编码服务
+const AMAP_SECRET_KEY = import.meta.env.VITE_AMAP_SECRET_KEY  // 安全密钥 - 签名验证
 
 // 响应式数据
 const startLocation = ref('正在获取位置...')

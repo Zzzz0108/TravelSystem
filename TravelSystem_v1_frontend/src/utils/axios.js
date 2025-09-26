@@ -1,14 +1,14 @@
 import axios from 'axios'
 
 // 创建axios实例
-const instance = axios.create({
-  baseURL: 'http://localhost:9090', // 后端API地址
+const api = axios.create({
+  baseURL: 'http://localhost:9090/api', // 后端API地址
   timeout: 30000, // 请求超时时间
   withCredentials: true // 允许跨域请求携带cookie
 })
 
 // 请求拦截器
-instance.interceptors.request.use(
+api.interceptors.request.use(
   config => {
     // 从localStorage获取token
     const token = localStorage.getItem('token')
@@ -23,7 +23,7 @@ instance.interceptors.request.use(
 )
 
 // 响应拦截器
-instance.interceptors.response.use(
+api.interceptors.response.use(
   response => {
     return response
   },
@@ -46,4 +46,4 @@ instance.interceptors.response.use(
   }
 )
 
-export default instance 
+export default api 

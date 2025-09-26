@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src')//路径别名
     }
   },
   optimizeDeps: {
@@ -24,11 +24,11 @@ export default defineConfig({
       }
     }
   },
-  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.svg'],
-  publicDir: 'public',
+  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.svg'],//这些后缀文件作为静态资源
+  publicDir: 'public',//公共目录
   build: {
-    assetsDir: 'assets',
-    outDir: 'dist',
-    assetsInlineLimit: 4096
+    assetsDir: 'assets',//静态资源目录
+    outDir: 'dist',//输出目录
+    assetsInlineLimit: 4096//静态资源内联限制
   }
 })

@@ -33,8 +33,8 @@
           </div>
           <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
 
-                      <!-- 密码输入 -->
-            <div class="input-box" :class="{ 'input-error': errors.password }">
+          <!-- 密码输入 -->
+          <div class="input-box" :class="{ 'input-error': errors.password }">
               <span class="icon"><img src="@/assets/icon/lock.svg" alt="lock icon" /></span>
             <input 
               :type="showPassword ? 'text' : 'password'" 
@@ -48,8 +48,8 @@
           </div>
           <span class="error-message" v-if="errors.password">{{ errors.password }}</span>
 
-                      <!-- 确认密码输入 -->
-            <div class="input-box" :class="{ 'input-error': errors.confirmPassword }">
+          <!-- 确认密码输入 -->
+          <div class="input-box" :class="{ 'input-error': errors.confirmPassword }">
               <span class="icon"><img src="@/assets/icon/lock.svg" alt="lock icon" /></span>
             <input 
               :type="showConfirmPassword ? 'text' : 'password'" 

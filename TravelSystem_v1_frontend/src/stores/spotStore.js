@@ -1,12 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
-
-// 创建axios实例
-const api = axios.create({
-  baseURL: '/api',
-  withCredentials: true // 允许跨域请求携带认证信息
-})
+import api from '@/utils/axios'
 
 export const useSpotStore = defineStore('spot', () => {
   const spots = ref([])

@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import * as diaryApi from '@/api/diaryApi'
 import * as commentApi from '@/api/commentApi'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
 
 export const useDiaryStore = defineStore('diary', () => {
   const diaries = ref([])

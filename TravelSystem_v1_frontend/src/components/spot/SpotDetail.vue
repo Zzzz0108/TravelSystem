@@ -214,10 +214,10 @@
   
   <script setup>
   import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useSpotStore } from '@/stores/spotStore'
-import { useDiaryStore } from '@/stores/diaryStore'
-import { useUserStore } from '@/stores/userStore'
+  import { useRoute, useRouter } from 'vue-router'
+  import { useSpotStore } from '@/stores/spotStore'
+  import { useDiaryStore } from '@/stores/diaryStore'
+  import { useUserStore } from '@/stores/userStore'
 import FavoriteButton from '@/components/common/buttons/FavoriteButton.vue'
 import { ElMessage } from 'element-plus'
   
@@ -286,7 +286,7 @@ import { ElMessage } from 'element-plus'
       if (userStore.user && spotDetail.value) {
         if (spotDetail.value.userRating === null || spotDetail.value.userRating === undefined || spotDetail.value.userRating === 0) {
           console.log('景点详情中没有用户评分，尝试获取用户评分')
-          await fetchUserRating()
+        await fetchUserRating()
         } else {
           console.log('景点详情中已有用户评分:', spotDetail.value.userRating)
         }
@@ -333,8 +333,8 @@ import { ElMessage } from 'element-plus'
           hasRated.value = true
           console.log('从评分统计获取到用户评分:', ratings.userRating)
         } else {
-          userRating.value = 0
-          hasRated.value = false
+      userRating.value = 0
+      hasRated.value = false
           console.log('未找到用户评分，设置为默认值')
         }
       }
@@ -356,13 +356,13 @@ import { ElMessage } from 'element-plus'
       console.log('评分接口返回结果:', result)
       
       if (result) {
-        userRating.value = rating
-        hasRated.value = true
+      userRating.value = rating
+      hasRated.value = true
         ElMessage.success('评分成功！')
         console.log('评分成功，更新本地状态')
         
-        // 刷新景点详情
-        await fetchSpotDetail()
+      // 刷新景点详情
+      await fetchSpotDetail()
       }
     } catch (error) {
       console.error('评分失败:', error)
@@ -382,11 +382,11 @@ import { ElMessage } from 'element-plus'
       // 通过设置评分为0来删除评分
       const result = await spotStore.rateSpot(spotId.value, 0)
       if (result) {
-        userRating.value = 0
-        hasRated.value = false
+      userRating.value = 0
+      hasRated.value = false
         ElMessage.success('评分已删除')
-        // 刷新景点详情
-        await fetchSpotDetail()
+      // 刷新景点详情
+      await fetchSpotDetail()
       }
     } catch (error) {
       console.error('删除评分失败:', error)

@@ -189,7 +189,7 @@ const switchTab = async (tab) => {
     currentFavorites.value = []
     
     // 先更新tab状态
-    activeTab.value = tab
+  activeTab.value = tab
     
     // 使用 nextTick 确保DOM更新完成
     await nextTick()
@@ -197,7 +197,7 @@ const switchTab = async (tab) => {
     // 再次检查组件是否仍然挂载
     if (!isComponentMounted.value) return
     
-    if (tab === 'spots') {
+  if (tab === 'spots') {
       console.log('切换到景点tab，当前景点收藏数量:', spotFavorites.value.length)
       // 切换到景点tab时，如果数据为空则重新获取
       if (spotFavorites.value.length === 0) {
@@ -239,7 +239,7 @@ const switchTab = async (tab) => {
         console.log('设置日记tab的currentFavorites，数量:', currentFavorites.value.length)
         console.log('日记数据详情:', currentFavorites.value)
         console.log('日记收藏总数:', diaryTotalElements.value)
-      } else {
+  } else {
         console.log('没有获取到日记数据，设置空数组')
         currentFavorites.value = []
         console.log('日记收藏总数:', diaryTotalElements.value)
@@ -301,7 +301,7 @@ const fetchSpotFavorites = async () => {
   } catch (err) {
     if (isComponentMounted.value) {
       console.error('获取景点收藏失败:', err)
-      error.value = '获取景点收藏失败，请稍后重试'
+    error.value = '获取景点收藏失败，请稍后重试'
       spotFavorites.value = []
       if (activeTab.value === 'spots') {
         currentFavorites.value = []
@@ -367,7 +367,7 @@ const fetchDiaryFavorites = async (page = 1, size = 20) => {
   } catch (err) {
     if (isComponentMounted.value) {
       console.error('获取日记收藏失败:', err)
-      error.value = '获取日记收藏失败，请稍后重试'
+    error.value = '获取日记收藏失败，请稍后重试'
       diaryFavorites.value = []
       diaryTotalElements.value = 0
       diaryTotalPages.value = 0
@@ -522,18 +522,18 @@ watch(() => spotStore.favoriteSpots, (newValue) => {
 
 // 添加全局事件监听，监听收藏状态变化
 const handleFavoriteUpdated = (event) => {
-  if (event.detail.action === 'removed') {
-    if (activeTab.value === 'spots') {
-      const spotId = event.detail.spotId
-      const newFavorites = currentFavorites.value.filter(spot => spot.id !== spotId)
-      currentFavorites.value = newFavorites
-      spotFavorites.value = newFavorites
-      spotStore.favoriteSpots = newFavorites
-      nextTick(() => {
-        syncStoreToLocal()
-      })
-    }
-      } else if (event.detail.action === 'added') {
+    if (event.detail.action === 'removed') {
+      if (activeTab.value === 'spots') {
+        const spotId = event.detail.spotId
+        const newFavorites = currentFavorites.value.filter(spot => spot.id !== spotId)
+        currentFavorites.value = newFavorites
+        spotFavorites.value = newFavorites
+        spotStore.favoriteSpots = newFavorites
+        nextTick(() => {
+          syncStoreToLocal()
+        })
+      }
+    } else if (event.detail.action === 'added') {
       // 清理之前的定时器
       if (window.favoriteUpdateTimer) {
         clearTimeout(window.favoriteUpdateTimer)
@@ -705,60 +705,60 @@ onUnmounted(() => {
   gap: 20px;
   padding: 0 20px;
 
-  .tab-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 16px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 
-    &:hover:not(.active) {
-      background: rgba(0, 0, 0, 0.6);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-    }
-
-    &.active {
-      background: rgba(0, 122, 255, 0.8);
-      color: #ffffff;
-      border-color: rgba(0, 122, 255, 0.5);
-      box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4);
-      transform: translateY(-4px);
-    }
-
-    .tab-icon {
-      width: 24px;
-      height: 24px;
-      stroke: currentColor;
-      stroke-width: 2;
-      fill: none;
-    }
-
-    .tab-count {
-      background: rgba(255, 45, 85, 0.9);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 8px;
-      box-shadow: 0 2px 8px rgba(255, 45, 85, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
+  &:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
   }
+
+  &.active {
+    background: rgba(0, 122, 255, 0.8);
+    color: #ffffff;
+    border-color: rgba(0, 122, 255, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4);
+    transform: translateY(-4px);
+  }
+
+  .tab-icon {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  .tab-count {
+    background: rgba(255, 45, 85, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+    box-shadow: 0 2px 8px rgba(255, 45, 85, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}
 }
 
   /* 分页组件样式 */
@@ -941,10 +941,10 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 12px;
     padding: 0 10px;
-    
-    .tab-button {
-      width: 100%;
-      justify-content: center;
+  
+  .tab-button {
+    width: 100%;
+    justify-content: center;
     }
   }
 }

@@ -1,20 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
-
-// 创建axios实例
-const api = axios.create({
-  baseURL: '/api',
-  withCredentials: true
-})
-
-// 添加请求拦截器
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+import api from '@/utils/axios'
 
 export const useUserStore = defineStore('user', {
   state: () => {
@@ -143,32 +128,6 @@ export const useUserStore = defineStore('user', {
           success: false,
           message: error.response?.data?.message || '注册失败，请重试'
         }
-      }
-    },
-
-    // 兼容旧版本的登录方法
-    async login(form) {
-      try {
-        console.log('开始登录请求:', form)
-        const response = await api.post('/auth/login', form)
-        console.log('登录响应:', response)
-        if (response.status === 200 && response.data) {
-          this.isLogin = true
-          this.user = {
-            id: response.data.user.id,
-            username: response.data.user.username,
-            email: response.data.user.email,
-            avatar: response.data.user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(response.data.user.username)}`
-          }
-          localStorage.setItem('isLogin', 'true')
-          localStorage.setItem('user', JSON.stringify(this.user))
-          localStorage.setItem('token', response.data.token)
-          return true
-        }
-        throw new Error(response.data?.message || '登录失败')
-      } catch (error) {
-        console.error('登录错误:', error)
-        throw new Error(error.response?.data?.message || '登录失败')
       }
     },
 

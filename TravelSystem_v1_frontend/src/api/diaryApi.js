@@ -1,44 +1,4 @@
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: 'http://localhost:9090/api',
-  timeout: 10000
-});
-
-// 添加请求拦截器，为需要认证的请求添加token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// 添加响应拦截器，统一处理错误
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    console.error('API请求失败:', error);
-    if (error.response?.status === 401) {
-      console.error('认证失败，请重新登录');
-    } else if (error.response?.status === 403) {
-      console.error('权限不足');
-    } else if (error.response?.status === 404) {
-      console.error('资源不存在');
-    } else if (error.response?.status === 500) {
-      console.error('服务器内部错误');
-    }
-    return Promise.reject(error);
-  }
-);
-
+import api from '@/utils/axios'
 // 获取日记列表
 export const getDiaries = async (params = {}) => {
   const response = await api.get('/diaries', { params });
